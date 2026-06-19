@@ -1,19 +1,27 @@
 # 四六级单词训练与 C++ 桌宠伴学系统
 
-这是一个整合版课程大作业项目，包含两个部分：
-
-- `web/`：浏览器里的四六级单词训练系统，负责登录、背词、查词、错题、复习计划、统计和网页伴学桌宠。
-- `desktop-pet/`：C++17 Windows 桌面宠物程序，负责桌面悬浮宠物、Windows TTS 朗读、本地 HTTP 服务、屏幕窗口感知和网页联动。
+这是一个整合版 C++ 课程大作业项目，包含网页背单词系统和 Windows C++ 桌面宠物程序。
 
 在线演示网页：
 
 https://tyh-ty.github.io/word-trainer-web/
 
-> 在线网页只能演示前端功能。C++ 桌宠、Windows TTS 和本地 HTTP 服务需要在 Windows 本机编译运行 `desktop-pet`。
+> 在线网页只能演示前端功能。C++ 桌宠、Windows TTS、本地 HTTP 服务需要在 Windows 本机编译运行。
 
-## C++ 部分
+## 目录结构
 
-`desktop-pet/` 是本项目的 C++ 核心，主要技术点包括：
+```text
+.
+├─ web/              # 四六级单词训练网页
+├─ desktop-pet/      # C++17 Windows 桌宠源码
+├─ open_web.bat      # 本地一键打开网页
+├─ run_desktop_pet.bat # 本地一键构建/启动 C++ 桌宠
+└─ .github/          # GitHub Pages 自动部署
+```
+
+## C++ 技术点
+
+`desktop-pet/` 是本项目的 C++ 核心，包含：
 
 - Win32 透明悬浮窗口、右键菜单、热键和消息循环
 - Direct2D / WIC 绘制桌宠图片、阴影和气泡
@@ -25,18 +33,15 @@ https://tyh-ty.github.io/word-trainer-web/
 - 文件读写保存复习记录、窗口位置和日志
 - 与网页通过 `/status`、`/speak`、`/record`、`/study-state`、`/bubble`、`/due` 等接口联动
 
-## 目录结构
+## 本地运行
 
-```text
-.
-├─ web/              # 网页背单词系统，可直接打开 index.html
-├─ desktop-pet/      # C++ 桌宠源码和 CMake 项目
-└─ .github/          # GitHub Pages 自动部署配置
+打开网页：
+
+```powershell
+.\open_web.bat
 ```
 
-## 运行网页
-
-直接打开：
+或直接打开：
 
 ```powershell
 start .\web\index.html
@@ -49,9 +54,13 @@ start .\web\index.html
 密码：123456
 ```
 
-## 构建 C++ 桌宠
+构建并启动 C++ 桌宠：
 
-需要 Windows、CMake、C++17 编译器，以及 Boost.JSON。
+```powershell
+.\run_desktop_pet.bat
+```
+
+也可以手动构建：
 
 ```powershell
 cd desktop-pet
@@ -79,7 +88,7 @@ $env:DESKTOPPET_API_KEY="你的 API key"
 
 ## 大作业演示建议
 
-1. 打开在线网页或本地 `web/index.html`，展示登录、背词、查词、复习计划和错题统计。
+1. 打开 `web/index.html` 或在线网页，展示登录、背词、查词、复习计划和错题统计。
 2. 启动 `desktop-pet/build/DesktopPet.exe`，展示 C++ 桌宠悬浮窗口。
 3. 在网页里点击“朗读”，展示网页调用 C++ 本地服务并用 Windows TTS 读单词。
 4. 答题或查词，展示 C++ 桌宠气泡和动作反馈。
