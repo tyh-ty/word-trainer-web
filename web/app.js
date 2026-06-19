@@ -19,6 +19,8 @@ const vocabMeta = window.CET_VOCAB_META || {
 const storagePrefix = "word-trainer-web-v3";
 const maxWordListItems = 300;
 const petBaseUrl = "http://127.0.0.1:18080";
+const petLaunchUrl = "wordtrainerpet://start";
+const petLaunchCooldownMs = 12 * 1000;
 const webTalkCooldownMs = 80 * 1000;
 const wrongReviewDelayMs = 60 * 1000;
 const fourHoursMs = 4 * 60 * 60 * 1000;
@@ -93,6 +95,7 @@ const elements = {
   floatingPetBubble: document.querySelector("#floatingPetBubble"),
   floatingPetSprite: document.querySelector("#floatingPetSprite"),
   floatingPetShadow: document.querySelector("#floatingPetShadow"),
+  petLaunchBtn: document.querySelector("#petLaunchBtn"),
   petReminderBtn: document.querySelector("#petReminderBtn"),
   petStyleBtn: document.querySelector("#petStyleBtn"),
   petAiSettingsBtn: document.querySelector("#petAiSettingsBtn"),
@@ -934,10 +937,54 @@ async function callPet(path, payload, timeoutMs = 1600) {
   }
 }
 
+function renderPetConnectionButton() {
+  if (!elements.petLaunchBtn) {
+    return;
+  }
+  elements.petLaunchBtn.textContent = state.petConnected ? "桌宠已连接" : "启动桌宠";
+  elements.petLaunchBtn.disabled = state.petConnected;
+}
+
+function launchDesktopPet(source = "manual") {
+  const now = Date.now();
+  const lastLaunchAt = Number(localStorage.getItem(storageKey("pet-launch-at")) || 0);
+  if (source === "auto" && now - lastLaunchAt < petLaunchCooldownMs) {
+    return;
+  }
+
+  localStorage.setItem(storageKey("pet-launch-at"), String(now));
+  setPetMood(
+    "study",
+    source === "auto" ? "正在尝试唤起本机 C++ 桌宠。" : "正在启动本机 C++ 桌宠。"
+  );
+
+  const frame = document.createElement("iframe");
+  frame.hidden = true;
+  frame.src = petLaunchUrl;
+  document.body.appendChild(frame);
+  window.setTimeout(() => frame.remove(), 1600);
+
+  window.setTimeout(async () => {
+    const connected = await refreshPetConnection(true);
+    if (!connected) {
+      setPetMood("sleep", "桌宠还没连上，请先运行根目录的协议注册脚本。");
+    }
+  }, 2600);
+}
+
+async function connectOrLaunchDesktopPet() {
+  const connected = await refreshPetConnection(false);
+  if (!connected) {
+    launchDesktopPet("auto");
+  }
+  return connected;
+}
+
 async function refreshPetConnection(showMessage = false) {
   try {
     const data = await callPet("/status", null, 1200);
     state.petConnected = Boolean(data.ok);
+    renderPetConnectionButton();
     if (showMessage && state.petConnected) {
       callPet("/bubble", { message: "网页已连接，开始背单词吧" }).catch(() => {});
     }
@@ -947,6 +994,7 @@ async function refreshPetConnection(showMessage = false) {
     return state.petConnected;
   } catch {
     state.petConnected = false;
+    renderPetConnectionButton();
     return false;
   }
 }
@@ -1596,6 +1644,10 @@ function bindEvents() {
     elements.loginUsername.focus();
   });
 
+  elements.petLaunchBtn.addEventListener("click", () => {
+    launchDesktopPet("manual");
+  });
+
   elements.petReminderBtn.addEventListener("click", () => {
     askPetToRemind();
   });
@@ -1793,6 +1845,8 @@ function init() {
   bindFloatingPetDrag();
   elements.petAvatar.dataset.action = "idle";
   elements.floatingPet.dataset.action = "idle";
+  renderPetConnectionButton();
+  connectOrLaunchDesktopPet();
   window.setInterval(() => {
     if (state.username) {
       checkLoginPetBehaviors();
