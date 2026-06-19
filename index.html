@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>四六级单词训练工作台</title>
+    <link rel="icon" href="assets/study-board.png" />
+    <link rel="stylesheet" href="styles.css?v=20260619d" />
+  </head>
+  <body>
+    <section class="auth-screen" id="authScreen" aria-label="账号登录">
+      <div class="auth-card">
+        <div class="auth-intro">
+          <img class="auth-art" src="assets/study-board.png" alt="单词学习卡片" />
+          <p class="eyebrow">Word Lab</p>
+          <h1>四六级单词训练工作台</h1>
+          <p class="auth-copy">登录自己的账号后进入练习，答题记录、正确率和错题本都会单独保存。</p>
+          <div class="auth-facts">
+            <span id="authWordCount">四六级词库</span>
+            <span>选择题</span>
+            <span>拼写题</span>
+          </div>
+        </div>
+
+        <form class="auth-form" id="authForm">
+          <label for="loginUsername">账号</label>
+          <input id="loginUsername" name="username" maxlength="24" autocomplete="username" />
+
+          <label for="loginPassword">密码</label>
+          <input id="loginPassword" name="password" type="password" maxlength="32" autocomplete="current-password" />
+
+          <div class="auth-actions">
+            <button class="primary-button" type="submit" data-auth-action="login">登录</button>
+            <button class="secondary-button" type="submit" data-auth-action="register">注册新账号</button>
+          </div>
+
+          <p class="auth-message" id="authMessage" aria-live="polite"></p>
+          <p class="auth-tip">默认演示账号：student / 123456</p>
+        </form>
+      </div>
+    </section>
+
+    <div class="app-shell hidden" id="appShell">
+      <aside class="side-panel" aria-label="学习概览">
+        <div class="brand">
+          <img class="brand-art" src="assets/study-board.png" alt="单词学习卡片" />
+          <div>
+            <p class="eyebrow">Word Lab</p>
+            <h1>四六级单词训练工作台</h1>
+          </div>
+        </div>
+
+        <section class="account-card" aria-label="当前账号">
+          <div>
+            <small>当前账号</small>
+            <strong id="currentUser">student</strong>
+          </div>
+          <button class="ghost-button" id="logoutBtn" type="button">退出</button>
+        </section>
+
+        <section class="companion-card" aria-label="伴学桌宠">
+          <div class="pet-avatar" id="petAvatar" aria-hidden="true">
+            <img class="pet-shadow" id="petShadow" src="assets/aimee_pet_shadow.png" alt="" />
+            <img class="pet-sprite" id="petSprite" src="assets/aimee_pet_hd.png" alt="" />
+          </div>
+          <div class="pet-copy">
+            <small>伴学桌宠</small>
+            <strong id="petMoodText">沉睡中</strong>
+            <p id="petBubbleText">查词和答题都会叫醒我。</p>
+          </div>
+          <div class="companion-actions">
+            <button class="ghost-button" id="petReminderBtn" type="button">提醒复习</button>
+            <button class="ghost-button" id="petStyleBtn" type="button">换外观</button>
+            <button class="ghost-button" id="petAiSettingsBtn" type="button">AI设置</button>
+          </div>
+        </section>
+
+        <nav class="app-nav" aria-label="功能页面">
+          <a class="nav-link active" href="#practice" data-page="practice" aria-current="page">练习</a>
+          <a class="nav-link" href="#search" data-page="search">查词</a>
+          <a class="nav-link" href="#add" data-page="add">添加单词</a>
+          <a class="nav-link" href="#words" data-page="words">词库</a>
+          <a class="nav-link" href="#stats" data-page="stats">统计与错题</a>
+        </nav>
+
+        <section class="panel-block" aria-label="词库筛选">
+          <div class="section-title">
+            <h2>词库范围</h2>
+            <span id="levelBadge">全部</span>
+          </div>
+          <div class="level-tabs" role="tablist" aria-label="词库范围">
+            <button class="level-btn active" type="button" data-level="all">全部</button>
+            <button class="level-btn" type="button" data-level="CET4">四级</button>
+            <button class="level-btn" type="button" data-level="CET6">六级</button>
+            <button class="level-btn" type="button" data-level="custom">自定义</button>
+          </div>
+        </section>
+
+        <section class="panel-block goal-card" aria-label="今日目标">
+          <div class="section-title">
+            <h2>今日目标</h2>
+            <span id="goalText">0 / 30</span>
+          </div>
+          <input id="dailyGoalInput" type="number" min="5" max="200" step="5" value="30" aria-label="今日目标题数" />
+          <div class="goal-meter" aria-hidden="true">
+            <span id="goalProgress"></span>
+          </div>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="workspace-hero">
+          <p class="eyebrow" id="pageEyebrow">Practice</p>
+          <h2 id="pageTitle">练习</h2>
+          <p id="pageDescription">选择题、拼写题和混合练习都在这个页面完成。</p>
+        </header>
+
+        <section class="practice-panel app-page active" data-page="practice" aria-label="练习区">
+          <div class="toolbar">
+            <div class="segmented" role="tablist" aria-label="练习模式">
+              <button class="mode-btn active" type="button" data-mode="choice">选择题</button>
+              <button class="mode-btn" type="button" data-mode="spelling">拼写题</button>
+              <button class="mode-btn" type="button" data-mode="mixed">混合</button>
+            </div>
+            <div class="practice-actions">
+              <button class="ghost-button" id="speakBtn" type="button">朗读</button>
+              <button class="ghost-button" id="markReviewBtn" type="button">加入复习</button>
+              <button class="primary-button" id="nextBtn" type="button">下一题</button>
+            </div>
+          </div>
+
+          <section class="study-plan" aria-label="学习规划">
+            <div class="plan-main">
+              <small>学习规划</small>
+              <strong id="planHeadline">先完成今日目标，再补查词计划。</strong>
+              <p id="planDetail">系统会根据到期复习、查过的词、错题和今日目标自动推荐练习顺序。</p>
+            </div>
+            <div class="plan-metrics" aria-label="规划数据">
+              <div>
+                <span id="planDueCount">0</span>
+                <small>到期</small>
+              </div>
+              <div>
+                <span id="planLookupCount">0</span>
+                <small>查词</small>
+              </div>
+              <div>
+                <span id="planWrongCount">0</span>
+                <small>错题</small>
+              </div>
+              <div>
+                <span id="planNewCount">30</span>
+                <small>还差</small>
+              </div>
+            </div>
+            <div class="plan-actions">
+              <button class="ghost-button" id="planDueBtn" type="button">练到期词</button>
+              <button class="ghost-button" id="planLookupBtn" type="button">练查词计划</button>
+              <button class="ghost-button" id="planWrongBtn" type="button">练错题</button>
+            </div>
+          </section>
+
+          <div class="question-stage" id="questionStage">
+            <p class="question-type" id="questionType">选择题</p>
+            <h2 id="questionText">abandon</h2>
+            <p class="question-hint" id="questionHint">选择这个单词的中文意思</p>
+            <p class="question-meta" id="questionMeta"></p>
+            <div class="answer-area" id="answerArea"></div>
+            <div class="result-line" id="resultLine" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section class="tool-panel app-page" data-page="search" aria-label="查词">
+          <div class="section-title">
+            <h2>查词</h2>
+            <span id="searchBadge">支持英文和中文</span>
+          </div>
+          <form id="searchForm" class="search-form">
+            <input id="searchInput" placeholder="输入英文单词或中文释义" autocomplete="off" />
+            <button class="secondary-button" type="submit">查询</button>
+          </form>
+          <div class="plan-strip" aria-label="查词规划">
+            <div>
+              <strong id="lookupPlanCount">0</strong>
+              <small>查词计划</small>
+            </div>
+            <button class="ghost-button" id="practiceLookupBtn" type="button">练查过的词</button>
+          </div>
+          <div class="search-result" id="searchResult"></div>
+        </section>
+
+        <section class="tool-panel app-page" data-page="add" aria-label="添加单词">
+          <div class="section-title">
+            <h2>添加单词</h2>
+            <span id="saveState">自动保存</span>
+          </div>
+          <form id="addWordForm" class="add-form">
+            <input id="newWord" placeholder="英文" autocomplete="off" />
+            <input id="newMeaning" placeholder="中文意思" autocomplete="off" />
+            <input id="newExample" placeholder="短语或例句，可不填" autocomplete="off" />
+            <button class="secondary-button" type="submit">加入自定义词库</button>
+          </form>
+        </section>
+
+        <section class="word-panel app-page" data-page="words" aria-label="词库列表">
+          <div class="section-title">
+            <h2>词库</h2>
+            <button class="ghost-button" id="clearCustomBtn" type="button">清空自定义</button>
+          </div>
+          <p class="word-list-info" id="wordListInfo"></p>
+          <div class="word-list" id="wordList"></div>
+        </section>
+
+        <section class="stats-page app-page" data-page="stats" aria-label="统计与错题">
+          <div class="stats-grid" aria-label="学习统计">
+            <div>
+              <span id="totalAnswered">0</span>
+              <small>答题</small>
+            </div>
+            <div>
+              <span id="accuracy">0%</span>
+              <small>正确率</small>
+            </div>
+            <div>
+              <span id="wrongCount">0</span>
+              <small>错题</small>
+            </div>
+            <div>
+              <span id="wordCount">0</span>
+              <small>当前词库</small>
+            </div>
+          </div>
+
+          <section class="panel-block">
+            <div class="section-title">
+              <h2>今日报告</h2>
+              <span id="todayLabel"></span>
+            </div>
+            <div class="report-grid">
+              <div>
+                <span id="todayAnswered">0</span>
+                <small>今日答题</small>
+              </div>
+              <div>
+                <span id="todayAccuracy">0%</span>
+                <small>今日正确率</small>
+              </div>
+              <div>
+                <span id="dueReviewCount">0</span>
+                <small>待复习</small>
+              </div>
+              <div>
+                <span id="markedReviewCount">0</span>
+                <small>手动加入</small>
+              </div>
+              <div>
+                <span id="lookupCount">0</span>
+                <small>查词计划</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-block">
+            <div class="section-title">
+              <h2>错题排行</h2>
+              <div class="section-actions">
+                <button class="ghost-button" id="reviewDueBtn" type="button">到期复习</button>
+                <button class="ghost-button" id="reviewWrongBtn" type="button">错题练习</button>
+                <button class="ghost-button" id="reviewLookupBtn" type="button">查词计划</button>
+              </div>
+            </div>
+            <div class="wrong-list" id="wrongList"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div class="floating-pet hidden" id="floatingPet" role="button" tabindex="0" aria-label="伴学桌宠">
+      <div class="floating-pet-bubble" id="floatingPetBubble">查词和答题都会叫醒我。</div>
+      <div class="floating-pet-stage" id="floatingPetStage" aria-hidden="true">
+        <img class="floating-pet-shadow" id="floatingPetShadow" src="assets/aimee_pet_shadow.png" alt="" />
+        <img class="floating-pet-sprite" id="floatingPetSprite" src="assets/aimee_pet_hd.png" alt="" />
+      </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="aiSettingsModal" role="dialog" aria-modal="true" aria-labelledby="aiSettingsTitle">
+      <form class="settings-modal" id="aiSettingsForm">
+        <div class="section-title">
+          <h2 id="aiSettingsTitle">网页宠 AI 闲聊</h2>
+          <button class="ghost-button icon-close" id="aiSettingsCloseBtn" type="button" aria-label="关闭">×</button>
+        </div>
+        <label class="toggle-row">
+          <input id="aiEnabled" type="checkbox" />
+          <span>开启网页宠独立 AI 闲聊</span>
+        </label>
+        <label for="aiEndpoint">API Endpoint</label>
+        <input id="aiEndpoint" autocomplete="off" placeholder="https://api.deepseek.com/v1/chat/completions" />
+        <label for="aiModel">Model</label>
+        <input id="aiModel" autocomplete="off" placeholder="deepseek-chat" />
+        <label for="aiApiKey">API Key</label>
+        <input id="aiApiKey" type="password" autocomplete="off" placeholder="只保存在本机浏览器" />
+        <p class="settings-hint" id="aiSettingsHint">开启后，网页宠会根据当前页面、题目和学习计划随机说话。</p>
+        <div class="settings-actions">
+          <button class="secondary-button" id="aiTestBtn" type="button">测试</button>
+          <button class="primary-button" type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+
+    <script src="data/cet-vocab.js"></script>
+    <script src="app.js?v=20260619d"></script>
+  </body>
+</html>
