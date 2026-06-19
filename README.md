@@ -1,82 +1,86 @@
-# 四六级单词训练工作台 网页版
+# 四六级单词训练与 C++ 桌宠伴学系统
 
-这是一个可以直接在浏览器中打开的背单词网站，不需要安装环境，也不需要启动服务器。
+这是一个整合版课程大作业项目，包含两个部分：
 
-## 打开方式
+- `web/`：浏览器里的四六级单词训练系统，负责登录、背词、查词、错题、复习计划、统计和网页伴学桌宠。
+- `desktop-pet/`：C++17 Windows 桌面宠物程序，负责桌面悬浮宠物、Windows TTS 朗读、本地 HTTP 服务、屏幕窗口感知和网页联动。
 
-双击 `index.html` 即可打开。
+在线演示网页：
 
-也可以双击 `open_website.bat`，它会自动用默认浏览器打开网页。
+https://tyh-ty.github.io/word-trainer-web/
 
-## 登录账号
+> 在线网页只能演示前端功能。C++ 桌宠、Windows TTS 和本地 HTTP 服务需要在 Windows 本机编译运行 `desktop-pet`。
 
-网页会先进入登录页，再进入主页面。
+## C++ 部分
+
+`desktop-pet/` 是本项目的 C++ 核心，主要技术点包括：
+
+- Win32 透明悬浮窗口、右键菜单、热键和消息循环
+- Direct2D / WIC 绘制桌宠图片、阴影和气泡
+- Windows SAPI TTS 朗读英文单词
+- WinSock 本地 HTTP 服务，默认监听 `http://127.0.0.1:18080`
+- WinHTTP 调用聊天 API 和天气接口
+- Boost.JSON 解析配置、接口请求和学习记录
+- 多线程处理 HTTP 服务、复习提醒、API 请求和朗读
+- 文件读写保存复习记录、窗口位置和日志
+- 与网页通过 `/status`、`/speak`、`/record`、`/study-state`、`/bubble`、`/due` 等接口联动
+
+## 目录结构
+
+```text
+.
+├─ web/              # 网页背单词系统，可直接打开 index.html
+├─ desktop-pet/      # C++ 桌宠源码和 CMake 项目
+└─ .github/          # GitHub Pages 自动部署配置
+```
+
+## 运行网页
+
+直接打开：
+
+```powershell
+start .\web\index.html
+```
 
 默认演示账号：
 
-- 账号：`student`
-- 密码：`123456`
+```text
+账号：student
+密码：123456
+```
 
-也可以在登录页直接注册自己的账号。账号、密码、学习进度和错题本都保存在本机浏览器的 `localStorage` 中，适合作为课程大作业演示，不作为真实联网登录系统使用。
+## 构建 C++ 桌宠
 
-## 功能
+需要 Windows、CMake、C++17 编译器，以及 Boost.JSON。
 
-- 登录和注册本地账号
-- 四级、六级、全部、自定义词库筛选
-- 选择题练习
-- 拼写题练习
-- 混合模式
-- 错题专项练习
-- 英文或中文查词
-- 查词计划：查过的词会自动加入计划，可以直接练习
-- 添加自定义单词
-- 学习统计和错题排行
-- 网页内置伴学桌宠，使用 `C:\Users\TYH\DesktopPet` 的爱弥斯/奶龙外观资源
-- 不会读的单词可以点“朗读”，会优先尝试调用本机 C++ 桌宠的 Windows TTS 服务，失败时自动改用浏览器朗读
-- 浏览器本地自动保存学习记录
+```powershell
+cd desktop-pet
+cmake -S . -B build
+cmake --build build
+.\build\DesktopPet.exe
+```
 
-## 伴学桌宠
+如果 CMake 找不到 Boost，可以先设置：
 
-这个版本以背单词网页为主程序，桌宠作为网页里的学习辅助显示在侧栏和右下角。外观资源来自 `C:\Users\TYH\DesktopPet\res`，已经复制到本网页的 `assets` 文件夹。
+```powershell
+$env:BOOST_ROOT="C:\path\to\boost"
+```
 
-桌宠状态按图片里的规则触发：
+## API Key 配置
 
-- 沉睡：首次启动且词汇量为 0
-- 破壳：正确记忆第 1 个单词
-- 饥饿：连续 4 小时没有学习
-- 开心：连续答对 5 题
-- 进化：累计词汇达到 50 / 150 / 300 / 500
-- 离家出走：连续 2 天没有打开程序
+仓库里的 `desktop-pet/config.json` 不包含真实 API key。运行 C++ 桌宠时建议设置环境变量：
 
-桌宠还能换外观、拖动位置、点击互动，并在查词、复习、朗读和答题时给出反馈。
+```powershell
+$env:DESKTOPPET_API_KEY="你的 API key"
+.\desktop-pet\build\DesktopPet.exe
+```
 
-## 词库
+网页宠的独立 AI 闲聊在网页内点击“AI设置”填写 endpoint、model 和 API key，配置只保存在当前浏览器的 `localStorage`。
 
-内置词库来自开源项目 `KyleBing/english-vocabulary`：
+## 大作业演示建议
 
-- 四级原始词条：7508 个
-- 六级原始词条：5651 个
-- 合并去重后网页实际词库：6662 个
-
-词库文件在 `data/cet-vocab.js`，网页通过普通 `<script>` 标签加载，所以直接双击 `index.html` 也能使用。
-
-## 延展性设计
-
-题型集中放在 `app.js` 的 `questionTypes` 对象中。现在包含：
-
-- `choice`：选择题
-- `spelling`：拼写题
-
-以后新增题型时，只需要继续在 `questionTypes` 中增加一个题型对象，并实现 `create()` 和 `render()` 两个方法。
-
-还可以继续扩展：
-
-- 例句填空题
-- 英译中输入题
-- 错题限时练习
-- 按掌握程度推荐复习
-- 增加考研、托福、雅思词库
-
-## 数据保存
-
-学习记录、错题本和自定义单词都使用浏览器 `localStorage` 保存。刷新页面或者关闭浏览器后再打开，当前电脑上的数据仍然存在。
+1. 打开在线网页或本地 `web/index.html`，展示登录、背词、查词、复习计划和错题统计。
+2. 启动 `desktop-pet/build/DesktopPet.exe`，展示 C++ 桌宠悬浮窗口。
+3. 在网页里点击“朗读”，展示网页调用 C++ 本地服务并用 Windows TTS 读单词。
+4. 答题或查词，展示 C++ 桌宠气泡和动作反馈。
+5. 说明 C++ 服务端如何通过本地 HTTP 接口与网页协作。

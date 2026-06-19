@@ -1,0 +1,40 @@
+{
+    "api": {
+        "endpoint": "https://api.deepseek.com/v1/chat/completions",
+        "api_key": "YOUR_API_KEY_HERE",
+        "model": "deepseek-chat",
+        "max_tokens": 300,
+        "timeout_ms": 30000
+    },
+    "monitoring": {
+        "title_poll_interval_ms": 1000,
+        "screenshot_interval_s": 60,
+        "screenshot_enabled": true,
+        "screenshot_downscale_width": 640
+    },
+    "pet": {
+        "size": 120,
+        "color": { "r": 255, "g": 181, "b": 197 },
+        "bottom_right_margin_px": 16,
+        "style": "aimee"
+    },
+    "chat": {
+        "bubble_duration_ms": 10000,
+        "max_history": 20
+    },
+    "weather": {
+        "location": "Beijing"
+    },
+    "word_trainer": {
+        "enabled": true,
+        "port": 18080,
+        "web_path": "..\\..\\web\\index.html",
+        "record_file": "word_records.json",
+        "reminder_interval_s": 30,
+        "reminder_cooldown_s": 120
+    },
+    "logging": {
+        "level": "info",
+        "file": "desktoppet.log"
+    }
+}

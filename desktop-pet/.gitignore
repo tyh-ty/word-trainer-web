@@ -1,0 +1,13 @@
+build/
+release/
+
+*.log
+pet_position.txt
+
+.ruff_cache/
+.cache/
+
+*.obj
+*.a
+*.exe
+*.zip

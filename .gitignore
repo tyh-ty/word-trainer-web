@@ -2,3 +2,13 @@
 .DS_Store
 Thumbs.db
 *.log
+build/
+release/
+desktop-pet/build/
+desktop-pet/release/
+desktop-pet/pet_position.txt
+desktop-pet/word_records.json
+*.obj
+*.a
+*.exe
+*.zip
