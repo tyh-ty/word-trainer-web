@@ -24,6 +24,9 @@ public:
 
     void start();
     void stop();
+    std::string handleEmbeddedRequest(const std::string& method,
+                                      const std::string& path,
+                                      const std::string& body);
 
 private:
     struct WordRecord {
@@ -48,6 +51,7 @@ private:
     std::string handleRecord(const std::string& body);
     std::string handleStudyState(const std::string& body);
     std::string handleDue() const;
+    std::string handleStaticFile(const std::string& path) const;
 
     void loadRecords();
     void saveRecordsLocked() const;
@@ -57,10 +61,13 @@ private:
     WordRecord* findDueRecordLocked(std::int64_t nowMs);
 
     static std::string jsonResponse(const std::string& body, const std::string& status = "200 OK");
+    static std::string staticResponse(const std::string& body, const std::string& contentType);
     static std::string emptyResponse(const std::string& status = "204 No Content");
+    static std::string responseBody(const std::string& response);
 
     HWND m_notifyWindow = nullptr;
     WordTrainerConfig m_config;
+    std::string m_baseDir;
     std::string m_recordPath;
     ScreenTalkProvider m_screenTalkProvider;
     std::thread m_serverThread;

@@ -206,6 +206,12 @@ std::string App::generateScreenTalk(const std::string& context) {
     return cleanBubbleText(response);
 }
 
+std::wstring localTrainerUrl(int port) {
+    std::wostringstream stream;
+    stream << L"http://127.0.0.1:" << port << L"/";
+    return stream.str();
+}
+
 void App::handleWordTrainerEvent(const std::string& payload) {
     try {
         auto root = boost::json::parse(payload).as_object();
@@ -394,9 +400,13 @@ int App::run(HINSTANCE hInstance) {
         cfg.monitor.titlePollMs, cfg.monitor.screenshotIntervalS,
         cfg.monitor.downscaleWidth, cfg.monitor.screenshotEnabled);
 
-    m_apiClient = std::make_unique<ApiClient>(
-        cfg.api.endpoint, cfg.api.apiKey, cfg.api.model,
-        cfg.api.maxTokens, cfg.api.timeoutMs);
+    if (!cfg.api.apiKey.empty()) {
+        m_apiClient = std::make_unique<ApiClient>(
+            cfg.api.endpoint, cfg.api.apiKey, cfg.api.model,
+            cfg.api.maxTokens, cfg.api.timeoutMs);
+    } else {
+        LOG_WARN("API key is empty; remote chat and weather comments are disabled");
+    }
 
     m_speechBubble = std::make_unique<SpeechBubble>();
 
@@ -408,6 +418,26 @@ int App::run(HINSTANCE hInstance) {
             return generateScreenTalk(context);
         });
     m_wordTrainerService->start();
+
+    std::string trainerWebPath = resolveFromBase(base, cfg.wordTrainer.webPath);
+    m_webView = std::make_unique<WebViewHostWindow>(hInstance);
+    m_webView->setRequestHandler([this](const std::string& method,
+                                        const std::string& path,
+                                        const std::string& body) {
+        if (!m_wordTrainerService) {
+            return std::string(R"({"ok":false,"error":"word trainer service not ready"})");
+        }
+        return m_wordTrainerService->handleEmbeddedRequest(method, path, body);
+    });
+    if (m_webView->create(L"四六级单词训练与 C++ 桌宠伴学系统",
+                          trainerWebPath,
+                          base + "webview_user_data")) {
+        m_webView->show();
+        if (m_speechBubble) m_speechBubble->show("背单词界面已内嵌打开", 2200);
+    } else {
+        m_webView.reset();
+        LOG_WARN("Embedded WebView failed to start");
+    }
 
     startApiWorker();
 
@@ -490,19 +520,17 @@ int App::run(HINSTANCE hInstance) {
             if (m_speechBubble) m_speechBubble->show("爱弥斯上线", 1800);
             break;
         case PetWindow::IDM_OPEN_WORD_TRAINER: {
-            std::string path = resolveFromBase(base, m_config.wordTrainer.webPath);
-            if (path.empty()) {
-                if (m_speechBubble) m_speechBubble->show("还没有配置网页路径", 2200);
-                break;
-            }
-
-            HINSTANCE result = ShellExecuteW(
-                nullptr, L"open", StringUtils::utf8ToWide(path).c_str(),
-                nullptr, nullptr, SW_SHOWNORMAL);
-            if ((INT_PTR)result <= 32) {
-                if (m_speechBubble) m_speechBubble->show("背单词网页打开失败", 2200);
-            } else if (m_speechBubble) {
-                m_speechBubble->show("开始背单词吧", 1800);
+            if (m_webView && m_webView->getHwnd()) {
+                ShowWindow(m_webView->getHwnd(), SW_SHOWNORMAL);
+                SetForegroundWindow(m_webView->getHwnd());
+                if (m_speechBubble) m_speechBubble->show("背单词界面在 C++ 程序里", 1800);
+            } else {
+                std::wstring url = localTrainerUrl(m_config.wordTrainer.port);
+                HINSTANCE result = ShellExecuteW(
+                    nullptr, L"open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+                if ((INT_PTR)result <= 32 && m_speechBubble) {
+                    m_speechBubble->show("背单词界面打开失败", 2200);
+                }
             }
             break;
         }
@@ -651,6 +679,7 @@ int App::run(HINSTANCE hInstance) {
     KillTimer(m_window->getHwnd(), PetWindow::IDT_RENDER);
     UnregisterHotKey(m_window->getHwnd(), PetWindow::IDH_TOGGLE);
     stopApiWorker();
+    m_webView.reset();
     m_wordTrainerService.reset();
     m_window->savePosition((base + "pet_position.txt").c_str());
     m_speechBubble.reset();

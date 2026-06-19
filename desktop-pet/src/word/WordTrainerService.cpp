@@ -14,6 +14,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <thread>
 #include <utility>
@@ -43,6 +44,80 @@ std::string trim(const std::string& value) {
 std::string urlPathOnly(const std::string& target) {
     size_t q = target.find('?');
     return q == std::string::npos ? target : target.substr(0, q);
+}
+
+int hexValue(char ch) {
+    if (ch >= '0' && ch <= '9') return ch - '0';
+    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+    return -1;
+}
+
+std::string urlDecodePath(const std::string& value) {
+    std::string out;
+    out.reserve(value.size());
+    for (size_t i = 0; i < value.size(); ++i) {
+        if (value[i] == '%' && i + 2 < value.size()) {
+            int hi = hexValue(value[i + 1]);
+            int lo = hexValue(value[i + 2]);
+            if (hi >= 0 && lo >= 0) {
+                out.push_back(static_cast<char>((hi << 4) | lo));
+                i += 2;
+                continue;
+            }
+        }
+        out.push_back(value[i] == '/' ? '\\' : value[i]);
+    }
+    return out;
+}
+
+bool isAbsolutePath(const std::string& path) {
+    if (path.size() >= 3 && std::isalpha(static_cast<unsigned char>(path[0])) &&
+        path[1] == ':' && (path[2] == '\\' || path[2] == '/')) {
+        return true;
+    }
+    return path.rfind("\\\\", 0) == 0 || path.rfind("//", 0) == 0;
+}
+
+std::string parentDir(std::string path) {
+    std::replace(path.begin(), path.end(), '/', '\\');
+    size_t pos = path.find_last_of('\\');
+    if (pos == std::string::npos) return {};
+    return path.substr(0, pos + 1);
+}
+
+std::string extensionOf(const std::string& path) {
+    size_t slash = path.find_last_of("\\/");
+    size_t dot = path.find_last_of('.');
+    if (dot == std::string::npos || (slash != std::string::npos && dot < slash)) return {};
+    std::string ext = path.substr(dot);
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return ext;
+}
+
+std::string mimeTypeForPath(const std::string& path) {
+    static const std::map<std::string, std::string> types = {
+        {".html", "text/html; charset=utf-8"},
+        {".htm", "text/html; charset=utf-8"},
+        {".css", "text/css; charset=utf-8"},
+        {".js", "application/javascript; charset=utf-8"},
+        {".json", "application/json; charset=utf-8"},
+        {".png", "image/png"},
+        {".jpg", "image/jpeg"},
+        {".jpeg", "image/jpeg"},
+        {".ico", "image/x-icon"},
+        {".svg", "image/svg+xml"},
+        {".webp", "image/webp"}
+    };
+    auto it = types.find(extensionOf(path));
+    return it == types.end() ? "application/octet-stream" : it->second;
+}
+
+std::string resolveFromBase(const std::string& base, const std::string& path) {
+    if (path.empty() || isAbsolutePath(path)) return path;
+    return base + path;
 }
 
 std::string recordKey(const std::string& spelling) {
@@ -132,6 +207,7 @@ WordTrainerService::WordTrainerService(HWND notifyWindow,
                                        ScreenTalkProvider screenTalkProvider)
     : m_notifyWindow(notifyWindow)
     , m_config(config)
+    , m_baseDir(baseDir)
     , m_recordPath(baseDir + config.recordFile)
     , m_screenTalkProvider(std::move(screenTalkProvider))
     , m_listenSocket(kInvalidSocket) {}
@@ -291,8 +367,22 @@ std::string WordTrainerService::handleRequest(const std::string& request,
     if (method == "POST" && path == "/screen-talk") return handleScreenTalk(body);
     if (method == "POST" && path == "/record") return handleRecord(body);
     if (method == "POST" && path == "/study-state") return handleStudyState(body);
+    if (method == "GET") return handleStaticFile(path);
 
     return jsonResponse(R"({"ok":false,"error":"not found"})", "404 Not Found");
+}
+
+std::string WordTrainerService::handleEmbeddedRequest(const std::string& method,
+                                                      const std::string& path,
+                                                      const std::string& body) {
+    if (method == "GET" && path == "/status") return responseBody(handleStatus());
+    if (method == "GET" && path == "/due") return responseBody(handleDue());
+    if (method == "POST" && path == "/speak") return responseBody(handleSpeak(body));
+    if (method == "POST" && path == "/bubble") return responseBody(handleBubble(body));
+    if (method == "POST" && path == "/screen-talk") return responseBody(handleScreenTalk(body));
+    if (method == "POST" && path == "/record") return responseBody(handleRecord(body));
+    if (method == "POST" && path == "/study-state") return responseBody(handleStudyState(body));
+    return R"({"ok":false,"error":"not found"})";
 }
 
 std::string WordTrainerService::handleStatus() const {
@@ -465,6 +555,42 @@ std::string WordTrainerService::handleDue() const {
     return jsonResponse(boost::json::serialize(root));
 }
 
+std::string WordTrainerService::handleStaticFile(const std::string& path) const {
+    std::string indexPath = resolveFromBase(m_baseDir, m_config.webPath);
+    if (indexPath.empty()) {
+        return jsonResponse(R"({"ok":false,"error":"web path not configured"})", "404 Not Found");
+    }
+
+    std::string webRoot = parentDir(indexPath);
+    if (webRoot.empty()) {
+        return jsonResponse(R"({"ok":false,"error":"bad web path"})", "404 Not Found");
+    }
+
+    std::string filePath;
+    if (path.empty() || path == "/") {
+        filePath = indexPath;
+    } else {
+        std::string decoded = urlDecodePath(path);
+        while (!decoded.empty() && (decoded.front() == '\\' || decoded.front() == '/')) {
+            decoded.erase(decoded.begin());
+        }
+        if (decoded.empty() || decoded.find("..") != std::string::npos ||
+            decoded.find(':') != std::string::npos) {
+            return jsonResponse(R"({"ok":false,"error":"bad path"})", "400 Bad Request");
+        }
+        filePath = webRoot + decoded;
+    }
+
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file) {
+        return jsonResponse(R"({"ok":false,"error":"not found"})", "404 Not Found");
+    }
+
+    std::string body((std::istreambuf_iterator<char>(file)),
+                     std::istreambuf_iterator<char>());
+    return staticResponse(body, mimeTypeForPath(filePath));
+}
+
 void WordTrainerService::loadRecords() {
     std::ifstream file(m_recordPath);
     if (!file) return;
@@ -597,6 +723,21 @@ std::string WordTrainerService::jsonResponse(const std::string& body,
     return response.str();
 }
 
+std::string WordTrainerService::staticResponse(const std::string& body,
+                                               const std::string& contentType) {
+    std::ostringstream response;
+    response << "HTTP/1.1 200 OK\r\n"
+             << "Content-Type: " << contentType << "\r\n"
+             << "Access-Control-Allow-Origin: *\r\n"
+             << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+             << "Access-Control-Allow-Headers: Content-Type\r\n"
+             << "Cache-Control: no-cache\r\n"
+             << "Connection: close\r\n"
+             << "Content-Length: " << body.size() << "\r\n\r\n"
+             << body;
+    return response.str();
+}
+
 std::string WordTrainerService::emptyResponse(const std::string& status) {
     std::ostringstream response;
     response << "HTTP/1.1 " << status << "\r\n"
@@ -606,4 +747,10 @@ std::string WordTrainerService::emptyResponse(const std::string& status) {
              << "Connection: close\r\n"
              << "Content-Length: 0\r\n\r\n";
     return response.str();
+}
+
+std::string WordTrainerService::responseBody(const std::string& response) {
+    size_t pos = response.find("\r\n\r\n");
+    if (pos == std::string::npos) return response;
+    return response.substr(pos + 4);
 }

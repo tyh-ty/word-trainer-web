@@ -229,7 +229,7 @@ LRESULT PetWindow::handleMessage(UINT msg, WPARAM wp, LPARAM lp) {
         AppendMenuW(menu, MF_POPUP | MF_STRING, (UINT_PTR)skinMenu, L"默认团子颜色");
 
         AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-        AppendMenuW(menu, MF_STRING, IDM_OPEN_WORD_TRAINER, L"打开背单词网页");
+        AppendMenuW(menu, MF_STRING, IDM_OPEN_WORD_TRAINER, L"打开内嵌学习界面");
         AppendMenuW(menu, MF_STRING, IDM_CLEAN_MEMORY, L"清理内存");
         AppendMenuW(menu, MF_STRING, IDM_EXIT, L"退出");
 

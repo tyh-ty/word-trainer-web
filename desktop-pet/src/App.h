@@ -6,6 +6,7 @@
 #include "api/ApiClient.h"
 #include "util/Config.h"
 #include "word/WordTrainerService.h"
+#include "win/WebViewHostWindow.h"
 #include <Windows.h>
 #include <atomic>
 #include <condition_variable>
@@ -40,6 +41,7 @@ private:
     std::unique_ptr<ScreenMonitor> m_monitor;
     std::unique_ptr<ApiClient> m_apiClient;
     std::unique_ptr<WordTrainerService> m_wordTrainerService;
+    std::unique_ptr<WebViewHostWindow> m_webView;
     std::thread m_apiWorker;
     std::mutex m_apiMutex;
     std::condition_variable m_apiCv;

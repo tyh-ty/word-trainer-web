@@ -6,6 +6,7 @@ build/
 release/
 desktop-pet/build/
 desktop-pet/release/
+desktop-pet/third_party/
 desktop-pet/pet_position.txt
 desktop-pet/word_records.json
 *.obj

@@ -2,7 +2,7 @@
 #include <Windows.h>
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
-    CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     App app;
     int result = app.run(hInstance);
     CoUninitialize();

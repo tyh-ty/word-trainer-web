@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>四六级单词训练工作台</title>
+    <title>四六级单词训练与 C++ 桌宠伴学系统</title>
     <link rel="icon" href="assets/study-board.png" />
     <link rel="stylesheet" href="styles.css?v=20260619d" />
   </head>
@@ -12,9 +12,9 @@
       <div class="auth-card">
         <div class="auth-intro">
           <img class="auth-art" src="assets/study-board.png" alt="单词学习卡片" />
-          <p class="eyebrow">Word Lab</p>
-          <h1>四六级单词训练工作台</h1>
-          <p class="auth-copy">登录自己的账号后进入练习，答题记录、正确率和错题本都会单独保存。</p>
+          <p class="eyebrow">C++ Word Trainer</p>
+          <h1>四六级单词训练与桌宠伴学系统</h1>
+          <p class="auth-copy">登录自己的账号后进入练习，答题记录、正确率和错题本都会单独保存，并同步给 C++ 桌宠。</p>
           <div class="auth-facts">
             <span id="authWordCount">四六级词库</span>
             <span>选择题</span>
@@ -58,20 +58,14 @@
           <button class="ghost-button" id="logoutBtn" type="button">退出</button>
         </section>
 
-        <section class="companion-card" aria-label="伴学桌宠">
-          <div class="pet-avatar" id="petAvatar" aria-hidden="true">
-            <img class="pet-shadow" id="petShadow" src="assets/aimee_pet_shadow.png" alt="" />
-            <img class="pet-sprite" id="petSprite" src="assets/aimee_pet_hd.png" alt="" />
-          </div>
+        <section class="companion-card" aria-label="C++ 桌宠状态">
           <div class="pet-copy">
-            <small>伴学桌宠</small>
-            <strong id="petMoodText">沉睡中</strong>
-            <p id="petBubbleText">查词和答题都会叫醒我。</p>
+            <small>C++ 桌宠状态</small>
+            <strong id="petMoodText">内置连接中</strong>
+            <p id="petBubbleText">学习动作会同步给桌面桌宠。</p>
           </div>
           <div class="companion-actions">
-            <button class="ghost-button" id="petLaunchBtn" type="button">启动桌宠</button>
             <button class="ghost-button" id="petReminderBtn" type="button">提醒复习</button>
-            <button class="ghost-button" id="petStyleBtn" type="button">换外观</button>
             <button class="ghost-button" id="petAiSettingsBtn" type="button">AI设置</button>
           </div>
         </section>
@@ -276,23 +270,15 @@
       </main>
     </div>
 
-    <div class="floating-pet hidden" id="floatingPet" role="button" tabindex="0" aria-label="伴学桌宠">
-      <div class="floating-pet-bubble" id="floatingPetBubble">查词和答题都会叫醒我。</div>
-      <div class="floating-pet-stage" id="floatingPetStage" aria-hidden="true">
-        <img class="floating-pet-shadow" id="floatingPetShadow" src="assets/aimee_pet_shadow.png" alt="" />
-        <img class="floating-pet-sprite" id="floatingPetSprite" src="assets/aimee_pet_hd.png" alt="" />
-      </div>
-    </div>
-
     <div class="modal-backdrop hidden" id="aiSettingsModal" role="dialog" aria-modal="true" aria-labelledby="aiSettingsTitle">
       <form class="settings-modal" id="aiSettingsForm">
         <div class="section-title">
-          <h2 id="aiSettingsTitle">网页宠 AI 闲聊</h2>
+          <h2 id="aiSettingsTitle">AI 学习提示</h2>
           <button class="ghost-button icon-close" id="aiSettingsCloseBtn" type="button" aria-label="关闭">×</button>
         </div>
         <label class="toggle-row">
           <input id="aiEnabled" type="checkbox" />
-          <span>开启网页宠独立 AI 闲聊</span>
+          <span>开启学习界面 AI 提示</span>
         </label>
         <label for="aiEndpoint">API Endpoint</label>
         <input id="aiEndpoint" autocomplete="off" placeholder="https://api.deepseek.com/v1/chat/completions" />
@@ -300,7 +286,7 @@
         <input id="aiModel" autocomplete="off" placeholder="deepseek-chat" />
         <label for="aiApiKey">API Key</label>
         <input id="aiApiKey" type="password" autocomplete="off" placeholder="只保存在本机浏览器" />
-        <p class="settings-hint" id="aiSettingsHint">开启后，网页宠会根据当前页面、题目和学习计划随机说话。</p>
+        <p class="settings-hint" id="aiSettingsHint">开启后，学习界面会根据当前页面、题目和学习计划生成提示。</p>
         <div class="settings-actions">
           <button class="secondary-button" id="aiTestBtn" type="button">测试</button>
           <button class="primary-button" type="submit">保存</button>

@@ -19,8 +19,6 @@ const vocabMeta = window.CET_VOCAB_META || {
 const storagePrefix = "word-trainer-web-v3";
 const maxWordListItems = 300;
 const petBaseUrl = "http://127.0.0.1:18080";
-const petLaunchUrl = "wordtrainerpet://start";
-const petLaunchCooldownMs = 12 * 1000;
 const webTalkCooldownMs = 80 * 1000;
 const wrongReviewDelayMs = 60 * 1000;
 const fourHoursMs = 4 * 60 * 60 * 1000;
@@ -95,9 +93,7 @@ const elements = {
   floatingPetBubble: document.querySelector("#floatingPetBubble"),
   floatingPetSprite: document.querySelector("#floatingPetSprite"),
   floatingPetShadow: document.querySelector("#floatingPetShadow"),
-  petLaunchBtn: document.querySelector("#petLaunchBtn"),
   petReminderBtn: document.querySelector("#petReminderBtn"),
-  petStyleBtn: document.querySelector("#petStyleBtn"),
   petAiSettingsBtn: document.querySelector("#petAiSettingsBtn"),
   aiSettingsModal: document.querySelector("#aiSettingsModal"),
   aiSettingsForm: document.querySelector("#aiSettingsForm"),
@@ -165,6 +161,44 @@ const elements = {
   wordListInfo: document.querySelector("#wordListInfo"),
   clearCustomBtn: document.querySelector("#clearCustomBtn")
 };
+
+const nativePetBridge = {
+  nextId: 1,
+  pending: new Map()
+};
+
+function hasNativePetBridge() {
+  return Boolean(window.chrome && window.chrome.webview);
+}
+
+if (hasNativePetBridge()) {
+  window.chrome.webview.addEventListener("message", (event) => {
+    let data = event.data;
+    if (typeof data === "string") {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        return;
+      }
+    }
+    if (!data || data.type !== "pet-api-response") {
+      return;
+    }
+
+    const pending = nativePetBridge.pending.get(data.id);
+    if (!pending) {
+      return;
+    }
+
+    window.clearTimeout(pending.timer);
+    nativePetBridge.pending.delete(data.id);
+    if (data.ok) {
+      pending.resolve(data.data);
+    } else {
+      pending.reject(new Error(data.error || "native bridge failed"));
+    }
+  });
+}
 
 const levelLabels = {
   all: "全部",
@@ -349,7 +383,7 @@ function showAiSettingsHint(message, ok = false) {
 
 function openAiSettings() {
   fillWebAiSettingsForm();
-  showAiSettingsHint("开启后，网页宠会根据当前页面、题目和学习计划随机说话。", true);
+  showAiSettingsHint("开启后，学习界面会根据当前页面、题目和学习计划生成提示。", true);
   elements.aiSettingsModal.classList.remove("hidden");
   elements.aiEndpoint.focus();
 }
@@ -585,23 +619,25 @@ function setPetMood(mood, message) {
     lookup: "查词规划中",
     read: "朗读中"
   };
-  elements.petMoodText.textContent = labels[mood] || "陪你背词";
-  elements.petBubbleText.textContent = message || "继续背单词吧。";
+  if (elements.petMoodText) elements.petMoodText.textContent = labels[mood] || "陪你背词";
+  if (elements.petBubbleText) elements.petBubbleText.textContent = message || "继续背单词吧。";
   playPetAction(mood || "study", actionForMood(mood));
-  elements.floatingPetBubble.textContent = message || "继续背单词吧。";
-  elements.floatingPetBubble.classList.add("active");
+  if (elements.floatingPetBubble) {
+    elements.floatingPetBubble.textContent = message || "继续背单词吧。";
+    elements.floatingPetBubble.classList.add("active");
+  }
   setPetMood.activeUntil = Date.now() + 5000;
   window.clearTimeout(setPetMood.timer);
   setPetMood.timer = window.setTimeout(() => {
-    elements.petMoodText.textContent = "陪你背词";
-    elements.petBubbleText.textContent = "查词、复习和答题我都会帮你记。";
+    if (elements.petMoodText) elements.petMoodText.textContent = "C++ 桌宠待命";
+    if (elements.petBubbleText) elements.petBubbleText.textContent = "查词、复习和答题会同步给桌面桌宠。";
     playPetAction("study", "idle");
-    elements.floatingPetBubble.classList.remove("active");
+    if (elements.floatingPetBubble) elements.floatingPetBubble.classList.remove("active");
   }, 5000);
 }
 
 function playPetAction(mood, action) {
-  [elements.petAvatar, elements.floatingPet].forEach((node) => {
+  [elements.petAvatar, elements.floatingPet].filter(Boolean).forEach((node) => {
     node.dataset.mood = mood || "study";
     node.dataset.action = "";
     void node.offsetWidth;
@@ -745,12 +781,12 @@ function actionForMood(mood) {
 
 function applyPetStyle(style) {
   const nextStyle = style === "nailong" ? "nailong" : "aimee";
-  elements.petAvatar.dataset.style = nextStyle;
-  elements.floatingPet.dataset.style = nextStyle;
-  elements.petSprite.src = `assets/${nextStyle}_pet_hd.png`;
-  elements.petShadow.src = `assets/${nextStyle}_pet_shadow.png`;
-  elements.floatingPetSprite.src = `assets/${nextStyle}_pet_hd.png`;
-  elements.floatingPetShadow.src = `assets/${nextStyle}_pet_shadow.png`;
+  if (elements.petAvatar) elements.petAvatar.dataset.style = nextStyle;
+  if (elements.floatingPet) elements.floatingPet.dataset.style = nextStyle;
+  if (elements.petSprite) elements.petSprite.src = `assets/${nextStyle}_pet_hd.png`;
+  if (elements.petShadow) elements.petShadow.src = `assets/${nextStyle}_pet_shadow.png`;
+  if (elements.floatingPetSprite) elements.floatingPetSprite.src = `assets/${nextStyle}_pet_hd.png`;
+  if (elements.floatingPetShadow) elements.floatingPetShadow.src = `assets/${nextStyle}_pet_shadow.png`;
   state.petEvents.petStyle = nextStyle;
   savePetEvents();
 }
@@ -763,6 +799,9 @@ function togglePetStyle() {
 }
 
 function loadFloatingPetPosition() {
+  if (!elements.floatingPet) {
+    return;
+  }
   const position = readJson(storageKey(`pet-position:${state.username}`), null);
   if (!position) {
     elements.floatingPet.style.right = "24px";
@@ -782,6 +821,10 @@ function saveFloatingPetPosition(x, y) {
 }
 
 function bindFloatingPetDrag() {
+  if (!elements.floatingPet) {
+    return;
+  }
+
   let dragging = false;
   let moved = false;
   let startX = 0;
@@ -916,6 +959,10 @@ function updatePetStatus(text) {
 }
 
 async function callPet(path, payload, timeoutMs = 1600) {
+  if (hasNativePetBridge()) {
+    return callNativePet(path, payload, timeoutMs);
+  }
+
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -937,54 +984,29 @@ async function callPet(path, payload, timeoutMs = 1600) {
   }
 }
 
-function renderPetConnectionButton() {
-  if (!elements.petLaunchBtn) {
-    return;
-  }
-  elements.petLaunchBtn.textContent = state.petConnected ? "桌宠已连接" : "启动桌宠";
-  elements.petLaunchBtn.disabled = state.petConnected;
-}
+function callNativePet(path, payload, timeoutMs = 1600) {
+  return new Promise((resolve, reject) => {
+    const id = String(nativePetBridge.nextId++);
+    const timer = window.setTimeout(() => {
+      nativePetBridge.pending.delete(id);
+      reject(new Error("native bridge timeout"));
+    }, timeoutMs);
 
-function launchDesktopPet(source = "manual") {
-  const now = Date.now();
-  const lastLaunchAt = Number(localStorage.getItem(storageKey("pet-launch-at")) || 0);
-  if (source === "auto" && now - lastLaunchAt < petLaunchCooldownMs) {
-    return;
-  }
-
-  localStorage.setItem(storageKey("pet-launch-at"), String(now));
-  setPetMood(
-    "study",
-    source === "auto" ? "正在尝试唤起本机 C++ 桌宠。" : "正在启动本机 C++ 桌宠。"
-  );
-
-  const frame = document.createElement("iframe");
-  frame.hidden = true;
-  frame.src = petLaunchUrl;
-  document.body.appendChild(frame);
-  window.setTimeout(() => frame.remove(), 1600);
-
-  window.setTimeout(async () => {
-    const connected = await refreshPetConnection(true);
-    if (!connected) {
-      setPetMood("sleep", "桌宠还没连上，请先运行根目录的协议注册脚本。");
-    }
-  }, 2600);
-}
-
-async function connectOrLaunchDesktopPet() {
-  const connected = await refreshPetConnection(false);
-  if (!connected) {
-    launchDesktopPet("auto");
-  }
-  return connected;
+    nativePetBridge.pending.set(id, { resolve, reject, timer });
+    window.chrome.webview.postMessage(JSON.stringify({
+      type: "pet-api",
+      id,
+      method: payload ? "POST" : "GET",
+      path,
+      payload: payload || null
+    }));
+  });
 }
 
 async function refreshPetConnection(showMessage = false) {
   try {
     const data = await callPet("/status", null, 1200);
     state.petConnected = Boolean(data.ok);
-    renderPetConnectionButton();
     if (showMessage && state.petConnected) {
       callPet("/bubble", { message: "网页已连接，开始背单词吧" }).catch(() => {});
     }
@@ -994,14 +1016,13 @@ async function refreshPetConnection(showMessage = false) {
     return state.petConnected;
   } catch {
     state.petConnected = false;
-    renderPetConnectionButton();
     return false;
   }
 }
 
 function browserSpeak(text) {
   if (!("speechSynthesis" in window)) {
-    showResult("当前浏览器不支持朗读，请先启动桌宠。", false);
+    showResult("当前运行环境不支持朗读，请使用 C++ 桌面程序打开。", false);
     return;
   }
   window.speechSynthesis.cancel();
@@ -1221,7 +1242,7 @@ function loginUser(username) {
   elements.currentUser.textContent = username;
   elements.authScreen.classList.add("hidden");
   elements.appShell.classList.remove("hidden");
-  elements.floatingPet.classList.remove("hidden");
+  if (elements.floatingPet) elements.floatingPet.classList.remove("hidden");
   loadFloatingPetPosition();
   elements.loginPassword.value = "";
   renderAll();
@@ -1639,20 +1660,16 @@ function bindEvents() {
     state.username = "";
     elements.appShell.classList.add("hidden");
     elements.authScreen.classList.remove("hidden");
-    elements.floatingPet.classList.add("hidden");
+    if (elements.floatingPet) elements.floatingPet.classList.add("hidden");
     elements.loginPassword.value = "";
     elements.loginUsername.focus();
-  });
-
-  elements.petLaunchBtn.addEventListener("click", () => {
-    launchDesktopPet("manual");
   });
 
   elements.petReminderBtn.addEventListener("click", () => {
     askPetToRemind();
   });
 
-  elements.petStyleBtn.addEventListener("click", () => {
+  if (elements.petStyleBtn) elements.petStyleBtn.addEventListener("click", () => {
     togglePetStyle();
   });
 
@@ -1675,7 +1692,7 @@ function bindEvents() {
     const settings = readWebAiSettingsForm();
     saveWebAiSettings(settings);
     state.lastWebTalkAt = 0;
-    showAiSettingsHint(settings.enabled ? "已保存，网页宠会自己调用远程 API 闲聊。" : "已保存，AI 闲聊已关闭。", true);
+    showAiSettingsHint(settings.enabled ? "已保存，学习界面会调用远程 API 生成提示。" : "已保存，AI 提示已关闭。", true);
   });
 
   elements.aiTestBtn.addEventListener("click", async () => {
@@ -1705,7 +1722,7 @@ function bindEvents() {
     }
   });
 
-  elements.petAvatar.addEventListener("click", () => {
+  if (elements.petAvatar) elements.petAvatar.addEventListener("click", () => {
     reactToPetClick();
   });
 
@@ -1843,10 +1860,9 @@ function init() {
   renderSearchResults([], "");
   bindEvents();
   bindFloatingPetDrag();
-  elements.petAvatar.dataset.action = "idle";
-  elements.floatingPet.dataset.action = "idle";
-  renderPetConnectionButton();
-  connectOrLaunchDesktopPet();
+  if (elements.petAvatar) elements.petAvatar.dataset.action = "idle";
+  if (elements.floatingPet) elements.floatingPet.dataset.action = "idle";
+  refreshPetConnection(false);
   window.setInterval(() => {
     if (state.username) {
       checkLoginPetBehaviors();

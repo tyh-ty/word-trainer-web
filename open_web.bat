@@ -1,3 +1,2 @@
 @echo off
-call "%~dp0register_desktop_pet_protocol.bat" >nul
-start "" "%~dp0web\index.html"
+call "%~dp0run_desktop_pet.bat"

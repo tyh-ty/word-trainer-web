@@ -28,7 +28,7 @@
     "word_trainer": {
         "enabled": true,
         "port": 18080,
-        "web_path": "..\\..\\web\\index.html",
+        "web_path": "web\\index.html",
         "record_file": "word_records.json",
         "reminder_interval_s": 30,
         "reminder_cooldown_s": 120
