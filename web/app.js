@@ -814,7 +814,10 @@ function actionForMood(mood) {
 }
 
 function applyPetStyle(style) {
-  const nextStyle = style === "nailong" ? "nailong" : "aimee";
+  let nextStyle = "aimee";
+  if (style === "nailong" || style === "aimee" || style === "default") {
+    nextStyle = style;
+  }
   if (elements.petAvatar) elements.petAvatar.dataset.style = nextStyle;
   if (elements.floatingPet) elements.floatingPet.dataset.style = nextStyle;
   if (elements.petSprite) elements.petSprite.src = `assets/${nextStyle}_pet_hd.png`;
@@ -826,10 +829,17 @@ function applyPetStyle(style) {
 }
 
 function togglePetStyle() {
-  const current = state.petEvents.petStyle === "nailong" ? "nailong" : "aimee";
-  const next = current === "aimee" ? "nailong" : "aimee";
+  const current = state.petEvents.petStyle || "aimee";
+  let next = "aimee";
+  if (current === "aimee") next = "nailong";
+  else if (current === "nailong") next = "default";
+  else next = "aimee";
   applyPetStyle(next);
-  setPetMood("happy", next === "aimee" ? "爱弥斯上线，继续陪你背。" : "奶龙上线，冲单词！");
+  
+  let label = "爱弥斯";
+  if (next === "nailong") label = "奶龙";
+  else if (next === "default") label = "团子";
+  setPetMood("happy", `${label}上线，继续陪你背。`);
 }
 
 function loadFloatingPetPosition() {
