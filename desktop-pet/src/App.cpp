@@ -90,8 +90,8 @@ std::string cleanBubbleText(std::string value) {
             (value.front() == '\'' && value.back() == '\''))) {
         value = trimAscii(value.substr(1, value.size() - 2));
     }
-    if (value.size() > 120) {
-        value.resize(120);
+    if (value.size() > 200) {
+        value.resize(200);
     }
     return value;
 }
@@ -159,7 +159,7 @@ std::string App::buildPetPrompt(const std::string& titleUtf8) const {
     prompt += "当前窗口：\"" + titleUtf8 + "\"。";
     prompt += "请用中文说一句轻松、俏皮、可爱的评论。";
     prompt += "不要提代码、调试、编程或技术细节。";
-    prompt += "回复不超过15个汉字。";
+    prompt += "回复不超过30个汉字。";
     return prompt;
 }
 
@@ -264,6 +264,42 @@ void App::handleWordTrainerEvent(const std::string& payload) {
                 m_pet->playAction(PetAction::Nod);
             }
             if (!message.empty() && m_speechBubble) m_speechBubble->show(message, 3200);
+        } else if (event == "cmd") {
+            if (message == "mood_idle" && m_pet) m_pet->setMood(PetMood::Idle);
+            else if (message == "mood_happy" && m_pet) m_pet->setMood(PetMood::Happy);
+            else if (message == "mood_curious" && m_pet) m_pet->setMood(PetMood::Curious);
+            else if (message == "mood_sleepy" && m_pet) m_pet->setMood(PetMood::Sleepy);
+            else if (message == "mood_surprised" && m_pet) m_pet->setMood(PetMood::Surprised);
+            else if (message == "mood_thinking" && m_pet) m_pet->setMood(PetMood::Thinking);
+            else if (message == "pin_bottom" && m_window) m_window->pinToBottomRight(m_config.pet.bottomRightMargin);
+            else if (message == "snap_window") {
+                m_snapToWindow = !m_snapToWindow;
+                if (m_speechBubble) m_speechBubble->show(m_snapToWindow ? "跟随窗口" : "自由闲逛", 1800);
+            }
+            else if (message == "style_default" && m_pet) {
+                m_pet->setStyle(PetStyle::Default);
+                if (m_speechBubble) m_speechBubble->show("切回默认外观", 1800);
+            }
+            else if (message == "style_nailong" && m_pet) {
+                m_pet->setStyle(PetStyle::Nailong);
+                if (m_speechBubble) m_speechBubble->show("奶龙上线", 1800);
+            }
+            else if (message == "style_aimee" && m_pet) {
+                m_pet->setStyle(PetStyle::Aimee);
+                if (m_speechBubble) m_speechBubble->show("爱弥斯上线", 1800);
+            }
+            else if (message == "clean_memory") {
+                PROCESS_MEMORY_COUNTERS pmc;
+                GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+                SIZE_T before = pmc.WorkingSetSize;
+                SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
+                GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+                SIZE_T after = pmc.WorkingSetSize;
+                std::ostringstream ss;
+                ss << "释放 " << (before - after) / 1024 << "KB";
+                if (m_speechBubble) m_speechBubble->show(ss.str(), 2500);
+            }
+            else if (message == "exit") PostQuitMessage(0);
         }
     } catch (const std::exception& e) {
         LOG_WARN("Bad word trainer event: %s", e.what());
@@ -416,6 +452,21 @@ int App::run(HINSTANCE hInstance) {
         m_window->getHwnd(), cfg.wordTrainer, base,
         [this](const std::string& context) {
             return generateScreenTalk(context);
+        },
+        [this]() -> std::string {
+            std::string title = foregroundTitleUtf8();
+            if (title.empty() && m_monitor) {
+                title = StringUtils::wideToUtf8(m_monitor->lastTitle());
+            }
+            return title;
+        },
+        [this]() -> std::string {
+            if (!m_pet) return "default";
+            switch (m_pet->getStyle()) {
+                case PetStyle::Nailong: return "nailong";
+                case PetStyle::Aimee: return "aimee";
+                default: return "default";
+            }
         });
     m_wordTrainerService->start();
 
@@ -594,7 +645,7 @@ int App::run(HINSTANCE hInstance) {
 
         m_chatTimer -= dt;
         if (m_chatTimer <= 0 && m_monitor && m_apiClient) {
-            m_chatTimer = 10.0f + (float)(std::rand() % 15);
+            m_chatTimer = 3.0f + (float)(std::rand() % 2);
             std::wstring wtitle = m_monitor->lastTitle();
             if (!wtitle.empty()) {
                 std::string titleUtf8 = StringUtils::wideToUtf8(wtitle);

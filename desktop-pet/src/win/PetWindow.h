@@ -73,7 +73,7 @@ private:
     HWND m_hWnd = nullptr;
     D2DRenderer m_renderer;
 
-    int m_width = 200;
+    int m_width = 260;
     int m_height = 360;
 
     bool m_dragging = false;

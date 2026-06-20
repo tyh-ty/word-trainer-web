@@ -3,6 +3,7 @@
 #include "../util/Logger.h"
 #include "../util/StringUtils.h"
 #include <algorithm>
+#include <cmath>
 
 SpeechBubble::SpeechBubble() {
     initTextFormat();
@@ -24,7 +25,7 @@ bool SpeechBubble::initTextFormat() {
     hr = m_writeFactory->CreateTextFormat(
         L"Microsoft YaHei UI", nullptr,
         DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-        DWRITE_FONT_STRETCH_NORMAL, 13.0f, L"zh-cn", &m_textFormat);
+        DWRITE_FONT_STRETCH_NORMAL, 18.0f, L"zh-cn", &m_textFormat);
     if (FAILED(hr)) {
         LOG_ERROR("CreateTextFormat failed: 0x%08X", hr);
         return false;
@@ -69,11 +70,11 @@ void SpeechBubble::draw(D2DRenderer* renderer, float petCx, float petTopY) {
 
     std::wstring wideText = StringUtils::utf8ToWide(m_text);
 
-    const float padX = 16.0f;
-    const float padY = 10.0f;
+    const float padX = 22.0f;
+    const float padY = 14.0f;
 
     IDWriteTextLayout* layout = nullptr;
-    const float textMaxW = 160.0f;
+    const float textMaxW = 200.0f;
     m_writeFactory->CreateTextLayout(wideText.c_str(), (UINT32)wideText.size(),
         m_textFormat, textMaxW, 200.0f, &layout);
     if (!layout) return;
@@ -81,11 +82,12 @@ void SpeechBubble::draw(D2DRenderer* renderer, float petCx, float petTopY) {
     DWRITE_TEXT_METRICS metrics;
     layout->GetMetrics(&metrics);
 
-    float textW = (std::min)(metrics.width, textMaxW);
-    float textH = (std::min)(metrics.height, 200.0f);
-    float bw = textW + padX * 2 + 2.0f;
-    float bh = textH + padY * 2 + 2.0f;
-    if (bw < 80.0f) bw = 80.0f;
+    float textW = metrics.width;
+    float textH = metrics.height;
+    float bw = textW + padX * 2;
+    float bh = textH + padY * 2;
+
+    if (bw < 120.0f) bw = 120.0f;
 
     float left = petCx - bw / 2.0f;
     float top = petTopY - bh - 30.0f;
@@ -96,21 +98,19 @@ void SpeechBubble::draw(D2DRenderer* renderer, float petCx, float petTopY) {
     float right = left + bw;
     float bottom = top + bh;
 
-    // Recreate layout with exact text width for proper centering
-    layout->Release();
-    m_writeFactory->CreateTextLayout(wideText.c_str(), (UINT32)wideText.size(),
-        m_textFormat, textW, 200.0f, &layout);
-    if (!layout) return;
-
     ID2D1SolidColorBrush* bubbleBrush = renderer->getBrush(1, 1, 1, alpha * 0.92f);
     ID2D1SolidColorBrush* textBrush  = renderer->getBrush(0.15f, 0.15f, 0.18f, alpha);
 
     D2D1_ROUNDED_RECT rr = {{left, top, right, bottom}, 14.0f, 14.0f};
     rt->FillRoundedRectangle(&rr, bubbleBrush);
 
+    // Adjust layout max width to match the actual bubble content text area,
+    // so center alignment works exactly inside the bubble text boundaries.
+    layout->SetMaxWidth(bw - padX * 2.0f);
+
     rt->DrawTextLayout(
         D2D1::Point2F(left + padX, top + padY),
-        layout, textBrush, D2D1_DRAW_TEXT_OPTIONS_CLIP);
+        layout, textBrush, D2D1_DRAW_TEXT_OPTIONS_NONE);
 
     layout->Release();
 }

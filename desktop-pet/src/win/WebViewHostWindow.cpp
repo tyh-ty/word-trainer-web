@@ -193,7 +193,7 @@ bool WebViewHostWindow::create(const std::wstring& title,
 
 void WebViewHostWindow::show() {
     if (!m_hWnd) return;
-    ShowWindow(m_hWnd, SW_SHOWNORMAL);
+    ShowWindow(m_hWnd, SW_SHOWMAXIMIZED);
     UpdateWindow(m_hWnd);
 }
 
@@ -236,6 +236,7 @@ LRESULT WebViewHostWindow::handleMessage(UINT msg, WPARAM wp, LPARAM lp) {
         safeRelease(m_webView);
         safeRelease(m_controller);
         safeRelease(m_environment);
+        PostQuitMessage(0);
         return 0;
     default:
         return DefWindowProcW(m_hWnd, msg, wp, lp);

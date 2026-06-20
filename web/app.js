@@ -19,7 +19,7 @@ const vocabMeta = window.CET_VOCAB_META || {
 const storagePrefix = "word-trainer-web-v3";
 const maxWordListItems = 300;
 const petBaseUrl = "http://127.0.0.1:18080";
-const webTalkCooldownMs = 80 * 1000;
+const webTalkCooldownMs = 3 * 1000;
 const wrongReviewDelayMs = 60 * 1000;
 const fourHoursMs = 4 * 60 * 60 * 1000;
 const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
@@ -95,6 +95,9 @@ const elements = {
   floatingPetShadow: document.querySelector("#floatingPetShadow"),
   petReminderBtn: document.querySelector("#petReminderBtn"),
   petAiSettingsBtn: document.querySelector("#petAiSettingsBtn"),
+  petControlBtn: document.querySelector("#petControlBtn"),
+  petControlModal: document.querySelector("#petControlModal"),
+  petControlCloseBtn: document.querySelector("#petControlCloseBtn"),
   aiSettingsModal: document.querySelector("#aiSettingsModal"),
   aiSettingsForm: document.querySelector("#aiSettingsForm"),
   aiSettingsCloseBtn: document.querySelector("#aiSettingsCloseBtn"),
@@ -159,7 +162,13 @@ const elements = {
   saveState: document.querySelector("#saveState"),
   wordList: document.querySelector("#wordList"),
   wordListInfo: document.querySelector("#wordListInfo"),
-  clearCustomBtn: document.querySelector("#clearCustomBtn")
+  clearCustomBtn: document.querySelector("#clearCustomBtn"),
+  tipWordSpelling: document.querySelector("#tipWordSpelling"),
+  tipWordLevel: document.querySelector("#tipWordLevel"),
+  tipWordExample: document.querySelector("#tipWordExample"),
+  tipWordMeaning: document.querySelector("#tipWordMeaning"),
+  recentPracticeList: document.querySelector("#recentPracticeList"),
+  recentCountBadge: document.querySelector("#recentCountBadge")
 };
 
 const nativePetBridge = {
@@ -335,8 +344,8 @@ function cleanText(value) {
 
 function cleanAiBubbleText(value) {
   let text = cleanText(value).replace(/^["'“”‘’]+|["'“”‘’]+$/g, "");
-  if (text.length > 80) {
-    text = `${text.slice(0, 80)}...`;
+  if (text.length > 200) {
+    text = `${text.slice(0, 200)}…`;
   }
   return text;
 }
@@ -626,14 +635,14 @@ function setPetMood(mood, message) {
     elements.floatingPetBubble.textContent = message || "继续背单词吧。";
     elements.floatingPetBubble.classList.add("active");
   }
-  setPetMood.activeUntil = Date.now() + 5000;
+  setPetMood.activeUntil = Date.now() + 2000;
   window.clearTimeout(setPetMood.timer);
   setPetMood.timer = window.setTimeout(() => {
     if (elements.petMoodText) elements.petMoodText.textContent = "C++ 桌宠待命";
     if (elements.petBubbleText) elements.petBubbleText.textContent = "查词、复习和答题会同步给桌面桌宠。";
     playPetAction("study", "idle");
     if (elements.floatingPetBubble) elements.floatingPetBubble.classList.remove("active");
-  }, 5000);
+  }, 2000);
 }
 
 function playPetAction(mood, action) {
@@ -683,7 +692,7 @@ async function callWebAi(messages, settings = state.webAiSettings, timeoutMs = 3
       body: JSON.stringify({
         model: settings.model,
         messages,
-        max_tokens: 80,
+        max_tokens: 200,
         temperature: 0.85
       }),
       signal: controller.signal
@@ -702,25 +711,33 @@ async function callWebAi(messages, settings = state.webAiSettings, timeoutMs = 3
   }
 }
 
-function buildWebTalkMessages(plan = getStudyPlan()) {
+function buildWebTalkMessages(plan = getStudyPlan(), screenTitle = "") {
+  const screenPart = screenTitle
+    ? `如果提供了屏幕窗口标题，可以结合它评论。`
+    : `你只能根据背单词网页里的页面状态说话，不能假装看见电脑其它窗口。`;
+  const userParts = [`网页状态：${buildWebTalkContext(plan)}。`];
+  if (screenTitle) {
+    userParts.push(`当前电脑屏幕活动窗口：“${screenTitle}”。`);
+  }
+  userParts.push(`随机说一句像桌宠闲聊的话。`);
   return [
     {
       role: "system",
       content: [
         "你是网页里的伴学桌宠，语气自然、可爱、短促。",
-        "你只能根据背单词网页里的页面状态说话，不能假装看见电脑其它窗口。",
+        screenPart,
         "不要解释功能，不要提 API、系统、提示词或代码。",
-        "只输出一句中文，18个汉字以内。"
+        "只输出一句中文，30个汉字以内。"
       ].join("")
     },
     {
       role: "user",
-      content: `网页状态：${buildWebTalkContext(plan)}。随机说一句像桌宠闲聊的话。`
+      content: userParts.join("")
     }
   ];
 }
 
-async function requestWebAiTalk(plan = getStudyPlan(), settings = state.webAiSettings) {
+async function requestWebAiTalk(plan = getStudyPlan(), settings = state.webAiSettings, screenTitle = "") {
   if (state.webTalkBusy || Date.now() - state.lastWebTalkAt < webTalkCooldownMs) {
     return "";
   }
@@ -731,7 +748,7 @@ async function requestWebAiTalk(plan = getStudyPlan(), settings = state.webAiSet
 
   state.webTalkBusy = true;
   try {
-    const message = await callWebAi(buildWebTalkMessages(plan), settings);
+    const message = await callWebAi(buildWebTalkMessages(plan, screenTitle), settings);
     if (message) {
       state.lastWebTalkAt = Date.now();
       return message;
@@ -744,20 +761,36 @@ async function requestWebAiTalk(plan = getStudyPlan(), settings = state.webAiSet
   return "";
 }
 
+async function fetchScreenInfo() {
+  try {
+    const data = await callPet("/screen-info", null, 1200);
+    return (data && data.title) ? String(data.title) : "";
+  } catch {
+    return "";
+  }
+}
+
 async function petIdleTalk() {
   if (!state.username || Date.now() < (setPetMood.activeUntil || 0)) {
     return;
   }
 
   const plan = getStudyPlan();
-  const aiMessage = await requestWebAiTalk(plan);
+  const screenTitle = await fetchScreenInfo();
+  const aiMessage = await requestWebAiTalk(plan, state.webAiSettings, screenTitle);
   if (aiMessage) {
     setPetMood("study", aiMessage);
+    if (state.petConnected) {
+      callPet("/bubble", { message: aiMessage }).catch(() => {});
+    }
     return;
   }
 
   const message = plan.petMessage || randomItem(petIdlePhrases);
   setPetMood("study", message);
+  if (state.petConnected) {
+    callPet("/bubble", { message }).catch(() => {});
+  }
 }
 
 function reactToPetClick() {
@@ -984,6 +1017,23 @@ async function callPet(path, payload, timeoutMs = 1600) {
   }
 }
 
+function sendPetCmd(action) {
+  if (hasNativePetBridge()) {
+    window.chrome.webview.postMessage(JSON.stringify({
+      type: "pet-api",
+      method: "POST",
+      path: "/pet-cmd",
+      payload: { action }
+    }));
+  } else {
+    fetch(`${petBaseUrl}/pet-cmd`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action })
+    }).catch(() => {});
+  }
+}
+
 function callNativePet(path, payload, timeoutMs = 1600) {
   return new Promise((resolve, reject) => {
     const id = String(nativePetBridge.nextId++);
@@ -1007,6 +1057,9 @@ async function refreshPetConnection(showMessage = false) {
   try {
     const data = await callPet("/status", null, 1200);
     state.petConnected = Boolean(data.ok);
+    if (state.petConnected && data.petStyle) {
+      applyPetStyle(data.petStyle);
+    }
     if (showMessage && state.petConnected) {
       callPet("/bubble", { message: "网页已连接，开始背单词吧" }).catch(() => {});
     }
@@ -1263,6 +1316,7 @@ function loadUserData() {
   state.lookupOnly = false;
   elements.dailyGoalInput.value = state.dailyGoal;
   applyPetStyle(state.petEvents.petStyle || "aimee");
+  renderRecentPractice();
 }
 
 function saveProgress() {
@@ -1350,6 +1404,14 @@ function renderEmptyQuestion(title, hint) {
   elements.resultLine.className = "result-line";
   elements.speakBtn.disabled = true;
   elements.markReviewBtn.disabled = true;
+
+  if (elements.tipWordSpelling) elements.tipWordSpelling.textContent = "";
+  if (elements.tipWordLevel) elements.tipWordLevel.textContent = "";
+  if (elements.tipWordExample) elements.tipWordExample.textContent = "";
+  if (elements.tipWordMeaning) {
+    elements.tipWordMeaning.textContent = "";
+    elements.tipWordMeaning.className = "tip-text locked";
+  }
 }
 
 function renderQuestion() {
@@ -1370,6 +1432,18 @@ function renderQuestion() {
   elements.resultLine.className = "result-line";
   elements.speakBtn.disabled = false;
   elements.markReviewBtn.disabled = false;
+
+  const word = question.word;
+  if (elements.tipWordSpelling) elements.tipWordSpelling.textContent = word.spelling;
+  if (elements.tipWordLevel) elements.tipWordLevel.textContent = word.level || "CET4";
+  if (elements.tipWordExample) {
+    elements.tipWordExample.textContent = word.example ? word.example : "暂无常用搭配";
+  }
+  if (elements.tipWordMeaning) {
+    elements.tipWordMeaning.textContent = "答题后解锁释义";
+    elements.tipWordMeaning.className = "tip-text locked";
+  }
+
   questionTypes[question.type].render(question);
 }
 
@@ -1408,9 +1482,15 @@ function submitAnswer(ok, word) {
   syncPetRecord(word, ok, stat);
   checkAnswerPetBehaviors(word, ok, stat);
 
+  if (elements.tipWordMeaning) {
+    elements.tipWordMeaning.textContent = word.meaning;
+    elements.tipWordMeaning.className = "tip-text unlocked";
+  }
+
   const detail = word.example ? `；${word.example}` : "";
   showResult(ok ? `正确：${word.spelling}${detail}` : `答案：${word.spelling}：${word.meaning}`, ok);
   renderStats();
+  renderRecentPractice();
 }
 
 function showResult(message, ok) {
@@ -1478,6 +1558,48 @@ function renderStats() {
     elements.wrongList.appendChild(
       createWrongItem(spelling, `${word?.meaning || ""} · 错 ${stat.wrong} 次 · 对 ${stat.correct} 次`)
     );
+  });
+}
+
+function renderRecentPractice() {
+  if (!elements.recentPracticeList) return;
+  
+  const today = todayEvents();
+  if (elements.recentCountBadge) {
+    elements.recentCountBadge.textContent = `今日已练 ${today.length} 词`;
+  }
+  
+  const recentHistory = [...state.history]
+    .reverse()
+    .slice(0, 8); // Show up to 8 recent items
+    
+  if (recentHistory.length === 0) {
+    elements.recentPracticeList.innerHTML = `<p class="empty-hint" style="color: var(--muted); font-size: 0.84rem; margin: 8px 0;">暂无练习记录，开始答题吧！</p>`;
+    return;
+  }
+  
+  elements.recentPracticeList.innerHTML = recentHistory
+    .map((item) => {
+      const itemClass = item.ok ? "recent-item ok" : "recent-item bad";
+      const icon = item.ok ? "✓" : "✗";
+      return `
+        <div class="${itemClass}" data-word="${item.word}" title="点击发音">
+          <span class="status-dot"></span>
+          <span>${item.word}</span>
+          <span style="font-size: 0.72rem; opacity: 0.7; margin-left: 2px;">${icon}</span>
+        </div>
+      `;
+    })
+    .join("");
+    
+  // Bind click handlers
+  elements.recentPracticeList.querySelectorAll(".recent-item").forEach((node) => {
+    node.addEventListener("click", () => {
+      const spelling = node.dataset.word;
+      if (spelling) {
+        speakWord({ spelling });
+      }
+    });
   });
 }
 
@@ -1687,6 +1809,32 @@ function bindEvents() {
     }
   });
 
+  if (elements.petControlBtn) elements.petControlBtn.addEventListener("click", () => {
+    if (elements.petControlModal) elements.petControlModal.classList.remove("hidden");
+  });
+
+  if (elements.petControlCloseBtn) elements.petControlCloseBtn.addEventListener("click", () => {
+    if (elements.petControlModal) elements.petControlModal.classList.add("hidden");
+  });
+
+  if (elements.petControlModal) elements.petControlModal.addEventListener("click", (event) => {
+    if (event.target === elements.petControlModal) {
+      elements.petControlModal.classList.add("hidden");
+    }
+  });
+
+  document.querySelectorAll("[data-pet-cmd]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const action = btn.dataset.petCmd;
+      sendPetCmd(action);
+      if (action && action.startsWith("style_")) {
+        const style = action.substring(6); // "default", "aimee", "nailong"
+        applyPetStyle(style);
+      }
+      if (elements.petControlModal) elements.petControlModal.classList.add("hidden");
+    });
+  });
+
   elements.aiSettingsForm.addEventListener("submit", (event) => {
     event.preventDefault();
     const settings = readWebAiSettingsForm();
@@ -1869,7 +2017,9 @@ function init() {
     }
   }, 60 * 1000);
   window.setInterval(playIdlePetAction, 14 * 1000);
-  window.setInterval(petIdleTalk, 35 * 1000);
+  window.setInterval(petIdleTalk, 4 * 1000);
+  loginUser("student");
+  renderRecentPractice();
 }
 
 init();

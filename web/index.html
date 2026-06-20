@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>四六级单词训练与 C++ 桌宠伴学系统</title>
     <link rel="icon" href="assets/study-board.png" />
-    <link rel="stylesheet" href="styles.css?v=20260619d" />
+    <link rel="stylesheet" href="styles.css?v=20260620_cache_bust_b" />
   </head>
   <body>
     <section class="auth-screen" id="authScreen" aria-label="账号登录">
@@ -59,6 +59,9 @@
         </section>
 
         <section class="companion-card" aria-label="C++ 桌宠状态">
+          <div class="pet-avatar" id="petAvatar">
+            <img src="assets/aimee_pet_hd.png" alt="Pet Avatar" id="petSprite" class="pet-sprite" />
+          </div>
           <div class="pet-copy">
             <small>C++ 桌宠状态</small>
             <strong id="petMoodText">内置连接中</strong>
@@ -67,6 +70,7 @@
           <div class="companion-actions">
             <button class="ghost-button" id="petReminderBtn" type="button">提醒复习</button>
             <button class="ghost-button" id="petAiSettingsBtn" type="button">AI设置</button>
+            <button class="ghost-button" id="petControlBtn" type="button">桌宠控制</button>
           </div>
         </section>
 
@@ -156,12 +160,44 @@
           </section>
 
           <div class="question-stage" id="questionStage">
-            <p class="question-type" id="questionType">选择题</p>
-            <h2 id="questionText">abandon</h2>
-            <p class="question-hint" id="questionHint">选择这个单词的中文意思</p>
-            <p class="question-meta" id="questionMeta"></p>
-            <div class="answer-area" id="answerArea"></div>
-            <div class="result-line" id="resultLine" aria-live="polite"></div>
+            <div class="question-main">
+              <p class="question-type" id="questionType">选择题</p>
+              <h2 id="questionText">abandon</h2>
+              <p class="question-hint" id="questionHint">选择这个单词的中文意思</p>
+              <p class="question-meta" id="questionMeta"></p>
+              <div class="answer-area" id="answerArea"></div>
+              <div class="result-line" id="resultLine" aria-live="polite"></div>
+            </div>
+
+            <div class="question-sidebar" id="questionSidebar">
+              <div class="tip-card">
+                <div class="tip-card-header">
+                  <span class="tip-badge">单词助记</span>
+                  <span class="tip-word-level" id="tipWordLevel">CET4</span>
+                </div>
+                <h3 class="tip-word-spelling" id="tipWordSpelling">abandon</h3>
+                
+                <div class="tip-content">
+                  <div class="tip-section">
+                    <h4>常用搭配 / 例句</h4>
+                    <p class="tip-text" id="tipWordExample">暂无常用搭配</p>
+                  </div>
+                  <div class="tip-section">
+                    <h4>详细释义</h4>
+                    <p class="tip-text locked" id="tipWordMeaning">答题后解锁释义</p>
+                  </div>
+                </div>
+              </div>
+          </div>
+
+          <div class="recent-practice" id="recentPracticeSection">
+            <div class="section-title">
+              <h3>最近练习记录</h3>
+              <span id="recentCountBadge">今日已练 0 词</span>
+            </div>
+            <div class="recent-list" id="recentPracticeList">
+              <p class="empty-hint">暂无练习记录，开始答题吧！</p>
+            </div>
           </div>
         </section>
 
@@ -294,7 +330,39 @@
       </form>
     </div>
 
+    <div class="modal-backdrop hidden" id="petControlModal" role="dialog" aria-modal="true" aria-labelledby="petControlTitle">
+      <div class="settings-modal" style="max-width: 400px;">
+        <div class="section-title">
+          <h2 id="petControlTitle">桌宠控制</h2>
+          <button class="ghost-button icon-close" id="petControlCloseBtn" type="button" aria-label="关闭">×</button>
+        </div>
+        
+        <label>切换心情</label>
+        <div class="segmented" style="margin-bottom: 16px;">
+          <button class="ghost-button" type="button" data-pet-cmd="mood_idle">普通</button>
+          <button class="ghost-button" type="button" data-pet-cmd="mood_happy">开心</button>
+          <button class="ghost-button" type="button" data-pet-cmd="mood_sleepy">困困</button>
+          <button class="ghost-button" type="button" data-pet-cmd="mood_surprised">惊讶</button>
+        </div>
+
+        <label>切换外观</label>
+        <div class="segmented" style="margin-bottom: 16px;">
+          <button class="ghost-button" type="button" data-pet-cmd="style_default">团子</button>
+          <button class="ghost-button" type="button" data-pet-cmd="style_aimee">爱弥斯</button>
+          <button class="ghost-button" type="button" data-pet-cmd="style_nailong">奶龙</button>
+        </div>
+
+        <label>窗口与系统</label>
+        <div class="settings-actions" style="justify-content: flex-start; gap: 8px; flex-wrap: wrap;">
+          <button class="ghost-button" type="button" data-pet-cmd="pin_bottom">贴到右下角</button>
+          <button class="ghost-button" type="button" data-pet-cmd="snap_window">跟随活动窗口</button>
+          <button class="ghost-button" type="button" data-pet-cmd="clean_memory">清理内存</button>
+          <button class="ghost-button" style="color: #ff4d4f;" type="button" data-pet-cmd="exit">退出程序</button>
+        </div>
+      </div>
+    </div>
+
     <script src="data/cet-vocab.js"></script>
-    <script src="app.js?v=20260619d"></script>
+    <script src="app.js?v=20260620c"></script>
   </body>
 </html>

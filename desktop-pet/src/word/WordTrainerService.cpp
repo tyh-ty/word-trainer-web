@@ -204,12 +204,16 @@ bool sendAll(SOCKET socket, const std::string& data) {
 WordTrainerService::WordTrainerService(HWND notifyWindow,
                                        const WordTrainerConfig& config,
                                        const std::string& baseDir,
-                                       ScreenTalkProvider screenTalkProvider)
+                                       ScreenTalkProvider screenTalkProvider,
+                                       ScreenInfoProvider screenInfoProvider,
+                                       PetStyleProvider petStyleProvider)
     : m_notifyWindow(notifyWindow)
     , m_config(config)
     , m_baseDir(baseDir)
     , m_recordPath(baseDir + config.recordFile)
     , m_screenTalkProvider(std::move(screenTalkProvider))
+    , m_screenInfoProvider(std::move(screenInfoProvider))
+    , m_petStyleProvider(std::move(petStyleProvider))
     , m_listenSocket(kInvalidSocket) {}
 
 WordTrainerService::~WordTrainerService() {
@@ -362,11 +366,13 @@ std::string WordTrainerService::handleRequest(const std::string& request,
     std::string path = urlPathOnly(target);
     if (method == "GET" && path == "/status") return handleStatus();
     if (method == "GET" && path == "/due") return handleDue();
+    if (method == "GET" && path == "/screen-info") return handleScreenInfo();
     if (method == "POST" && path == "/speak") return handleSpeak(body);
     if (method == "POST" && path == "/bubble") return handleBubble(body);
     if (method == "POST" && path == "/screen-talk") return handleScreenTalk(body);
     if (method == "POST" && path == "/record") return handleRecord(body);
     if (method == "POST" && path == "/study-state") return handleStudyState(body);
+    if (method == "POST" && path == "/pet-cmd") return handlePetCmd(body);
     if (method == "GET") return handleStaticFile(path);
 
     return jsonResponse(R"({"ok":false,"error":"not found"})", "404 Not Found");
@@ -377,11 +383,13 @@ std::string WordTrainerService::handleEmbeddedRequest(const std::string& method,
                                                       const std::string& body) {
     if (method == "GET" && path == "/status") return responseBody(handleStatus());
     if (method == "GET" && path == "/due") return responseBody(handleDue());
+    if (method == "GET" && path == "/screen-info") return responseBody(handleScreenInfo());
     if (method == "POST" && path == "/speak") return responseBody(handleSpeak(body));
     if (method == "POST" && path == "/bubble") return responseBody(handleBubble(body));
     if (method == "POST" && path == "/screen-talk") return responseBody(handleScreenTalk(body));
     if (method == "POST" && path == "/record") return responseBody(handleRecord(body));
     if (method == "POST" && path == "/study-state") return responseBody(handleStudyState(body));
+    if (method == "POST" && path == "/pet-cmd") return responseBody(handlePetCmd(body));
     return R"({"ok":false,"error":"not found"})";
 }
 
@@ -393,6 +401,22 @@ std::string WordTrainerService::handleStatus() const {
     root["tts"] = true;
     root["reminders"] = true;
     root["screenTalk"] = static_cast<bool>(m_screenTalkProvider);
+    if (m_petStyleProvider) {
+        root["petStyle"] = m_petStyleProvider();
+    } else {
+        root["petStyle"] = "default";
+    }
+    return jsonResponse(boost::json::serialize(root));
+}
+
+std::string WordTrainerService::handleScreenInfo() {
+    boost::json::object root;
+    root["ok"] = true;
+    if (m_screenInfoProvider) {
+        root["title"] = m_screenInfoProvider();
+    } else {
+        root["title"] = "";
+    }
     return jsonResponse(boost::json::serialize(root));
 }
 
@@ -523,6 +547,21 @@ std::string WordTrainerService::handleStudyState(const std::string& body) {
         return jsonResponse(R"({"ok":true})");
     } catch (const std::exception& e) {
         LOG_ERROR("WordTrainerService /study-state parse failed: %s", e.what());
+        return jsonResponse(R"({"ok":false,"error":"bad json"})", "400 Bad Request");
+    }
+}
+
+std::string WordTrainerService::handlePetCmd(const std::string& body) {
+    try {
+        auto root = boost::json::parse(body).as_object();
+        std::string action = jsonString(root, "action");
+        if (action.empty()) {
+            return jsonResponse(R"({"ok":false,"error":"action is empty"})", "400 Bad Request");
+        }
+        postPetEvent("cmd", action);
+        return jsonResponse(R"({"ok":true})");
+    } catch (const std::exception& e) {
+        LOG_ERROR("WordTrainerService /pet-cmd parse failed: %s", e.what());
         return jsonResponse(R"({"ok":false,"error":"bad json"})", "400 Bad Request");
     }
 }

@@ -19,7 +19,7 @@
         "style": "aimee"
     },
     "chat": {
-        "bubble_duration_ms": 10000,
+        "bubble_duration_ms": 2500,
         "max_history": 20
     },
     "weather": {

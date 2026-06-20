@@ -197,62 +197,6 @@ LRESULT PetWindow::handleMessage(UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     }
 
-    case WM_RBUTTONUP: {
-        POINT pt;
-        GetCursorPos(&pt);
-
-        HMENU menu = CreatePopupMenu();
-        HMENU moodMenu = CreatePopupMenu();
-        AppendMenuW(moodMenu, MF_STRING, IDM_MOOD_IDLE,      L"普通");
-        AppendMenuW(moodMenu, MF_STRING, IDM_MOOD_HAPPY,     L"开心");
-        AppendMenuW(moodMenu, MF_STRING, IDM_MOOD_CURIOUS,   L"好奇");
-        AppendMenuW(moodMenu, MF_STRING, IDM_MOOD_SLEEPY,    L"困困");
-        AppendMenuW(moodMenu, MF_STRING, IDM_MOOD_SURPRISED, L"惊讶");
-        AppendMenuW(moodMenu, MF_STRING, IDM_MOOD_THINKING,  L"思考");
-        AppendMenuW(menu, MF_POPUP | MF_STRING, (UINT_PTR)moodMenu, L"切换心情");
-
-        AppendMenuW(menu, MF_STRING, IDM_PIN_BOTTOM, L"贴到右下角");
-        AppendMenuW(menu, MF_STRING, IDM_SNAP_WINDOW, L"跟随活动窗口");
-
-        HMENU styleMenu = CreatePopupMenu();
-        AppendMenuW(styleMenu, MF_STRING, IDM_STYLE_AIMEE,   L"爱弥斯");
-        AppendMenuW(styleMenu, MF_STRING, IDM_STYLE_NAILONG, L"奶龙");
-        AppendMenuW(styleMenu, MF_STRING, IDM_STYLE_DEFAULT, L"默认团子");
-        AppendMenuW(menu, MF_POPUP | MF_STRING, (UINT_PTR)styleMenu, L"切换外观");
-
-        HMENU skinMenu = CreatePopupMenu();
-        AppendMenuW(skinMenu, MF_STRING, IDM_SKIN_PINK,   L"粉色");
-        AppendMenuW(skinMenu, MF_STRING, IDM_SKIN_BLUE,   L"蓝色");
-        AppendMenuW(skinMenu, MF_STRING, IDM_SKIN_GREEN,  L"绿色");
-        AppendMenuW(skinMenu, MF_STRING, IDM_SKIN_ORANGE, L"橙色");
-        AppendMenuW(skinMenu, MF_STRING, IDM_SKIN_PURPLE, L"紫色");
-        AppendMenuW(menu, MF_POPUP | MF_STRING, (UINT_PTR)skinMenu, L"默认团子颜色");
-
-        AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-        AppendMenuW(menu, MF_STRING, IDM_OPEN_WORD_TRAINER, L"打开内嵌学习界面");
-        AppendMenuW(menu, MF_STRING, IDM_CLEAN_MEMORY, L"清理内存");
-        AppendMenuW(menu, MF_STRING, IDM_EXIT, L"退出");
-
-        SetForegroundWindow(m_hWnd);
-        SetWindowLongPtr(m_hWnd, GWL_EXSTYLE,
-            GetWindowLongPtr(m_hWnd, GWL_EXSTYLE) & ~WS_EX_TOPMOST);
-        SetWindowPos(m_hWnd, nullptr, 0, 0, 0, 0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOZORDER | SWP_FRAMECHANGED);
-
-        int cmd = (int)TrackPopupMenu(menu,
-            TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD | TPM_NONOTIFY,
-            pt.x, pt.y, 0, m_hWnd, nullptr);
-
-        SetWindowLongPtr(m_hWnd, GWL_EXSTYLE,
-            GetWindowLongPtr(m_hWnd, GWL_EXSTYLE) | WS_EX_TOPMOST);
-        SetWindowPos(m_hWnd, HWND_TOPMOST, 0, 0, 0, 0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-
-        DestroyMenu(menu);
-        if (cmd && m_menuCb) m_menuCb(static_cast<MenuCmd>(cmd));
-        return 0;
-    }
-
     case WM_API_RESPONSE: {
         if (lp && m_apiCb) {
             std::string* text = reinterpret_cast<std::string*>(lp);

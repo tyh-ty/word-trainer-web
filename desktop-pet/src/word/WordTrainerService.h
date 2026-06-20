@@ -15,11 +15,15 @@ using HWND = HWND__*;
 class WordTrainerService {
 public:
     using ScreenTalkProvider = std::function<std::string(const std::string& context)>;
+    using ScreenInfoProvider = std::function<std::string()>;
+    using PetStyleProvider = std::function<std::string()>;
 
     WordTrainerService(HWND notifyWindow,
                        const WordTrainerConfig& config,
                        const std::string& baseDir,
-                       ScreenTalkProvider screenTalkProvider = {});
+                       ScreenTalkProvider screenTalkProvider = {},
+                       ScreenInfoProvider screenInfoProvider = {},
+                       PetStyleProvider petStyleProvider = {});
     ~WordTrainerService();
 
     void start();
@@ -50,6 +54,8 @@ private:
     std::string handleScreenTalk(const std::string& body);
     std::string handleRecord(const std::string& body);
     std::string handleStudyState(const std::string& body);
+    std::string handlePetCmd(const std::string& body);
+    std::string handleScreenInfo();
     std::string handleDue() const;
     std::string handleStaticFile(const std::string& path) const;
 
@@ -70,6 +76,8 @@ private:
     std::string m_baseDir;
     std::string m_recordPath;
     ScreenTalkProvider m_screenTalkProvider;
+    ScreenInfoProvider m_screenInfoProvider;
+    PetStyleProvider m_petStyleProvider;
     std::thread m_serverThread;
     std::thread m_reminderThread;
     std::atomic<bool> m_stop{true};
