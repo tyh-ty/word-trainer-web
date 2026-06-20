@@ -26,6 +26,20 @@ def main():
             text = text.replace("C++ 桌宠伴学", "《灵契·伴读灵》")
         if "桌宠伴学" in text:
             text = text.replace("桌宠伴学", "伴读灵")
+            
+        # General replacements for "C++ 桌宠" and "桌宠"
+        if "C++ 桌面桌宠" in text:
+            text = text.replace("C++ 桌面桌宠", "桌面伴读灵")
+        if "C++桌面桌宠" in text:
+            text = text.replace("C++桌面桌宠", "桌面伴读灵")
+        if "桌面桌宠" in text:
+            text = text.replace("桌面桌宠", "桌面伴读灵")
+        if "C++ 桌宠" in text:
+            text = text.replace("C++ 桌宠", "伴读灵")
+        if "C++桌宠" in text:
+            text = text.replace("C++桌宠", "伴读灵")
+        if "桌宠" in text:
+            text = text.replace("桌宠", "伴读灵")
         return text
 
     # Walk through slide elements

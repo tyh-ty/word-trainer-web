@@ -164,6 +164,7 @@ const elements = {
   wordListInfo: document.querySelector("#wordListInfo"),
   clearCustomBtn: document.querySelector("#clearCustomBtn"),
   tipWordSpelling: document.querySelector("#tipWordSpelling"),
+  tipWordPhonetic: document.querySelector("#tipWordPhonetic"),
   tipWordLevel: document.querySelector("#tipWordLevel"),
   tipWordExample: document.querySelector("#tipWordExample"),
   tipWordMeaning: document.querySelector("#tipWordMeaning"),
@@ -638,8 +639,8 @@ function setPetMood(mood, message) {
   setPetMood.activeUntil = Date.now() + 2000;
   window.clearTimeout(setPetMood.timer);
   setPetMood.timer = window.setTimeout(() => {
-    if (elements.petMoodText) elements.petMoodText.textContent = "C++ 桌宠待命";
-    if (elements.petBubbleText) elements.petBubbleText.textContent = "查词、复习和答题会同步给桌面桌宠。";
+    if (elements.petMoodText) elements.petMoodText.textContent = "伴读灵待命";
+    if (elements.petBubbleText) elements.petBubbleText.textContent = "查词、复习和答题会同步给桌面伴读灵。";
     playPetAction("study", "idle");
     if (elements.floatingPetBubble) elements.floatingPetBubble.classList.remove("active");
   }, 2000);
@@ -1406,6 +1407,7 @@ function renderEmptyQuestion(title, hint) {
   elements.markReviewBtn.disabled = true;
 
   if (elements.tipWordSpelling) elements.tipWordSpelling.textContent = "";
+  if (elements.tipWordPhonetic) elements.tipWordPhonetic.textContent = "";
   if (elements.tipWordLevel) elements.tipWordLevel.textContent = "";
   if (elements.tipWordExample) elements.tipWordExample.textContent = "";
   if (elements.tipWordMeaning) {
@@ -1443,8 +1445,52 @@ function renderQuestion() {
     elements.tipWordMeaning.textContent = "答题后解锁释义";
     elements.tipWordMeaning.className = "tip-text locked";
   }
+  showPhonetic(word.spelling);
 
   questionTypes[question.type].render(question);
+}
+
+async function showPhonetic(spelling) {
+  if (!elements.tipWordPhonetic) return;
+  elements.tipWordPhonetic.textContent = "";
+  
+  const cleanSpelling = spelling.trim().toLowerCase();
+  const cacheKey = `ipa_${cleanSpelling}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    elements.tipWordPhonetic.textContent = cached;
+    return;
+  }
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1800);
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(cleanSpelling)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data[0]) {
+        let ipa = data[0].phonetic || "";
+        if (!ipa && data[0].phonetics) {
+          const firstWithIpa = data[0].phonetics.find(p => p.text);
+          if (firstWithIpa) ipa = firstWithIpa.text;
+        }
+        if (ipa) {
+          if (!ipa.startsWith("/")) ipa = "/" + ipa;
+          if (!ipa.endsWith("/")) ipa = ipa + "/";
+          localStorage.setItem(cacheKey, ipa);
+          if (elements.tipWordSpelling.textContent === spelling) {
+            elements.tipWordPhonetic.textContent = ipa;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.log("IPA fetch skip:", err);
+  }
 }
 
 function submitAnswer(ok, word) {

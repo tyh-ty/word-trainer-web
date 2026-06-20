@@ -14,7 +14,7 @@
           <img class="auth-art" src="assets/study-board.png" alt="单词学习卡片" />
           <p class="eyebrow">C++ Word Trainer</p>
           <h1>《灵契·伴读灵》--词汇羁绊养成系统</h1>
-          <p class="auth-copy">登录自己的账号后进入练习，答题记录、正确率和错题本都会单独保存，并同步给 C++ 桌宠。</p>
+          <p class="auth-copy">登录自己的账号后进入练习，答题记录、正确率和错题本都会单独保存，并同步给桌面伴读灵。</p>
           <div class="auth-facts">
             <span id="authWordCount">四六级词库</span>
             <span>选择题</span>
@@ -58,19 +58,19 @@
           <button class="ghost-button" id="logoutBtn" type="button">退出</button>
         </section>
 
-        <section class="companion-card" aria-label="C++ 桌宠状态">
+        <section class="companion-card" aria-label="伴读灵状态">
           <div class="pet-avatar" id="petAvatar">
             <img src="assets/aimee_pet_hd.png" alt="Pet Avatar" id="petSprite" class="pet-sprite" />
           </div>
           <div class="pet-copy">
-            <small>C++ 桌宠状态</small>
+            <small>伴读灵状态</small>
             <strong id="petMoodText">内置连接中</strong>
-            <p id="petBubbleText">学习动作会同步给桌面桌宠。</p>
+            <p id="petBubbleText">学习动作会同步给桌面伴读灵。</p>
           </div>
           <div class="companion-actions">
             <button class="ghost-button" id="petReminderBtn" type="button">提醒复习</button>
             <button class="ghost-button" id="petAiSettingsBtn" type="button">AI设置</button>
-            <button class="ghost-button" id="petControlBtn" type="button">桌宠控制</button>
+            <button class="ghost-button" id="petControlBtn" type="button">伴读灵控制</button>
           </div>
         </section>
 
@@ -175,7 +175,10 @@
                   <span class="tip-badge">单词助记</span>
                   <span class="tip-word-level" id="tipWordLevel">CET4</span>
                 </div>
-                <h3 class="tip-word-spelling" id="tipWordSpelling">abandon</h3>
+                <h3 class="tip-word-spelling">
+                  <span id="tipWordSpelling">abandon</span>
+                  <span class="tip-word-phonetic" id="tipWordPhonetic"></span>
+                </h3>
                 
                 <div class="tip-content">
                   <div class="tip-section">
@@ -333,7 +336,7 @@
     <div class="modal-backdrop hidden" id="petControlModal" role="dialog" aria-modal="true" aria-labelledby="petControlTitle">
       <div class="settings-modal" style="max-width: 400px;">
         <div class="section-title">
-          <h2 id="petControlTitle">桌宠控制</h2>
+          <h2 id="petControlTitle">伴读灵控制</h2>
           <button class="ghost-button icon-close" id="petControlCloseBtn" type="button" aria-label="关闭">×</button>
         </div>
         

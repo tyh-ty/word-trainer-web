@@ -135,11 +135,11 @@ void App::enqueueApiJob(ApiJob job) {
 }
 
 std::string App::petDisplayName() const {
-    if (!m_pet) return "桌宠";
+    if (!m_pet) return "伴读灵";
     switch (m_pet->getStyle()) {
     case PetStyle::Aimee:   return "爱弥斯";
     case PetStyle::Nailong: return "奶龙";
-    default:                return "桌宠";
+    default:                return "伴读灵";
     }
 }
 
@@ -198,7 +198,7 @@ std::string App::generateScreenTalk(const std::string& context) {
     if (!context.empty()) {
         prompt += "背单词网页当前状态：" + context + "。";
     }
-    prompt += "这句话会显示在网页伴学桌宠气泡里，像真的桌宠闲聊，不要像系统提示。";
+    prompt += "这句话会显示在网页伴学“伴读灵”气泡里，像真的“伴读灵”在向主人闲聊，不要像系统提示。";
 
     std::string response = m_apiClient->send(
         prompt,
