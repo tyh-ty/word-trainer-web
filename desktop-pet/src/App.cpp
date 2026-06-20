@@ -480,7 +480,7 @@ int App::run(HINSTANCE hInstance) {
         }
         return m_wordTrainerService->handleEmbeddedRequest(method, path, body);
     });
-    if (m_webView->create(L"四六级单词训练与 C++ 桌宠伴学系统",
+    if (m_webView->create(L"《灵契·伴读灵》--词汇羁绊养成系统",
                           trainerWebPath,
                           base + "webview_user_data")) {
         m_webView->show();
