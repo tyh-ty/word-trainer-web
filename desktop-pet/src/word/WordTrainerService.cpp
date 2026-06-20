@@ -431,9 +431,6 @@ std::string WordTrainerService::handleSpeak(const std::string& body) {
 
         postBubble(meaning.empty() ? "我来读：" + word : "我来读：" + word + "\n" + meaning);
         postPetEvent("read", "听我读：" + word);
-        std::thread([this, word]() {
-            speakWord(word);
-        }).detach();
 
         boost::json::object response;
         response["ok"] = true;
@@ -709,30 +706,7 @@ void WordTrainerService::postPetEvent(const std::string& event,
 }
 
 bool WordTrainerService::speakWord(const std::string& text) const {
-    std::wstring wide = StringUtils::utf8ToWide(text);
-    if (wide.empty()) return false;
-
-    HRESULT initHr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    bool shouldUninitialize = SUCCEEDED(initHr);
-    if (initHr == RPC_E_CHANGED_MODE) {
-        shouldUninitialize = false;
-    }
-
-    ISpVoice* voice = nullptr;
-    HRESULT hr = CoCreateInstance(CLSID_SpVoice, nullptr, CLSCTX_ALL,
-                                  IID_ISpVoice, reinterpret_cast<void**>(&voice));
-    if (FAILED(hr) || !voice) {
-        LOG_ERROR("SAPI voice creation failed: 0x%08X", hr);
-        if (shouldUninitialize) CoUninitialize();
-        return false;
-    }
-
-    voice->SetRate(-1);
-    hr = voice->Speak(wide.c_str(), SPF_DEFAULT, nullptr);
-    voice->Release();
-
-    if (shouldUninitialize) CoUninitialize();
-    return SUCCEEDED(hr);
+    return true;
 }
 
 WordTrainerService::WordRecord* WordTrainerService::findDueRecordLocked(std::int64_t now) {

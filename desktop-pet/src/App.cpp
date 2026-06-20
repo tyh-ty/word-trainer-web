@@ -543,12 +543,12 @@ int App::run(HINSTANCE hInstance) {
     m_window->setMenuCallback([this, base](PetWindow::MenuCmd cmd) {
         if (!m_pet) return;
         switch (cmd) {
-        case PetWindow::IDM_MOOD_IDLE:      m_pet->setMood(PetMood::Idle);      break;
-        case PetWindow::IDM_MOOD_HAPPY:     m_pet->setMood(PetMood::Happy);     break;
-        case PetWindow::IDM_MOOD_CURIOUS:   m_pet->setMood(PetMood::Curious);   break;
-        case PetWindow::IDM_MOOD_SLEEPY:    m_pet->setMood(PetMood::Sleepy);    break;
-        case PetWindow::IDM_MOOD_SURPRISED: m_pet->setMood(PetMood::Surprised); break;
-        case PetWindow::IDM_MOOD_THINKING:  m_pet->setMood(PetMood::Thinking);  break;
+        case PetWindow::IDM_MOOD_IDLE:      m_pet->setMood(PetMood::Idle);      SoundPlayer::playMoodChange(); break;
+        case PetWindow::IDM_MOOD_HAPPY:     m_pet->setMood(PetMood::Happy);     SoundPlayer::playMoodChange(); break;
+        case PetWindow::IDM_MOOD_CURIOUS:   m_pet->setMood(PetMood::Curious);   SoundPlayer::playMoodChange(); break;
+        case PetWindow::IDM_MOOD_SLEEPY:    m_pet->setMood(PetMood::Sleepy);    SoundPlayer::playMoodChange(); break;
+        case PetWindow::IDM_MOOD_SURPRISED: m_pet->setMood(PetMood::Surprised); SoundPlayer::playMoodChange(); break;
+        case PetWindow::IDM_MOOD_THINKING:  m_pet->setMood(PetMood::Thinking);  SoundPlayer::playMoodChange(); break;
         case PetWindow::IDM_PIN_BOTTOM:
             m_window->pinToBottomRight(m_config.pet.bottomRightMargin);
             break;

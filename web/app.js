@@ -148,6 +148,7 @@ const elements = {
   markReviewBtn: document.querySelector("#markReviewBtn"),
   questionType: document.querySelector("#questionType"),
   questionText: document.querySelector("#questionText"),
+  questionPhonetic: document.querySelector("#questionPhonetic"),
   questionHint: document.querySelector("#questionHint"),
   questionMeta: document.querySelector("#questionMeta"),
   answerArea: document.querySelector("#answerArea"),
@@ -818,14 +819,22 @@ function applyPetStyle(style) {
   if (style === "nailong" || style === "aimee" || style === "default") {
     nextStyle = style;
   }
+  const oldStyle = state.petEvents.petStyle || "aimee";
+  const changed = (oldStyle !== nextStyle);
+
+  const buster = "?v=20260620_v3";
   if (elements.petAvatar) elements.petAvatar.dataset.style = nextStyle;
   if (elements.floatingPet) elements.floatingPet.dataset.style = nextStyle;
-  if (elements.petSprite) elements.petSprite.src = `assets/${nextStyle}_pet_hd.png`;
-  if (elements.petShadow) elements.petShadow.src = `assets/${nextStyle}_pet_shadow.png`;
-  if (elements.floatingPetSprite) elements.floatingPetSprite.src = `assets/${nextStyle}_pet_hd.png`;
-  if (elements.floatingPetShadow) elements.floatingPetShadow.src = `assets/${nextStyle}_pet_shadow.png`;
+  if (elements.petSprite) elements.petSprite.src = `assets/${nextStyle}_pet_hd.png${buster}`;
+  if (elements.petShadow) elements.petShadow.src = `assets/${nextStyle}_pet_shadow.png${buster}`;
+  if (elements.floatingPetSprite) elements.floatingPetSprite.src = `assets/${nextStyle}_pet_hd.png${buster}`;
+  if (elements.floatingPetShadow) elements.floatingPetShadow.src = `assets/${nextStyle}_pet_shadow.png${buster}`;
   state.petEvents.petStyle = nextStyle;
   savePetEvents();
+
+  if (changed && state.petConnected) {
+    sendPetCmd("style_" + nextStyle);
+  }
 }
 
 function togglePetStyle() {
@@ -1068,8 +1077,13 @@ async function refreshPetConnection(showMessage = false) {
   try {
     const data = await callPet("/status", null, 1200);
     state.petConnected = Boolean(data.ok);
-    if (state.petConnected && data.petStyle) {
-      applyPetStyle(data.petStyle);
+    if (state.petConnected) {
+      const preferredStyle = state.petEvents.petStyle || "aimee";
+      if (data.petStyle && data.petStyle !== preferredStyle) {
+        sendPetCmd("style_" + preferredStyle);
+      } else {
+        applyPetStyle(data.petStyle || preferredStyle);
+      }
     }
     if (showMessage && state.petConnected) {
       callPet("/bubble", { message: "网页已连接，开始背单词吧" }).catch(() => {});
@@ -1085,15 +1099,22 @@ async function refreshPetConnection(showMessage = false) {
 }
 
 function browserSpeak(text) {
-  if (!("speechSynthesis" in window)) {
-    showResult("当前运行环境不支持朗读，请使用 C++ 桌面程序打开。", false);
-    return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.08);
+  } catch (e) {
+    console.warn("Web audio beep failed:", e);
   }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  utterance.rate = 0.88;
-  window.speechSynthesis.speak(utterance);
 }
 
 async function speakWord(word = state.currentQuestion?.word) {
@@ -1418,6 +1439,7 @@ function renderEmptyQuestion(title, hint) {
 
   if (elements.tipWordSpelling) elements.tipWordSpelling.textContent = "";
   if (elements.tipWordPhonetic) elements.tipWordPhonetic.textContent = "";
+  if (elements.questionPhonetic) elements.questionPhonetic.textContent = "";
   if (elements.tipWordLevel) elements.tipWordLevel.textContent = "";
   if (elements.tipWordExample) elements.tipWordExample.textContent = "";
   if (elements.tipWordMeaning) {
@@ -1461,17 +1483,31 @@ function renderQuestion() {
 }
 
 async function showPhonetic(spelling) {
-  if (!elements.tipWordPhonetic) return;
-  elements.tipWordPhonetic.textContent = "";
+  const targets = [elements.tipWordPhonetic, elements.questionPhonetic].filter(Boolean);
+  if (targets.length === 0) return;
+  targets.forEach(el => el.textContent = "");
   
   const cleanSpelling = spelling.trim().toLowerCase();
+
+  function setIpa(ipa) {
+    targets.forEach(el => el.textContent = ipa);
+  }
+
+  // 1) Check precompiled local dictionary first (instant, offline)
+  if (window.CET_PHONETICS && window.CET_PHONETICS[cleanSpelling]) {
+    setIpa(window.CET_PHONETICS[cleanSpelling]);
+    return;
+  }
+
+  // 2) Check localStorage cache
   const cacheKey = `ipa_${cleanSpelling}`;
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
-    elements.tipWordPhonetic.textContent = cached;
+    setIpa(cached);
     return;
   }
   
+  // 3) Fall back to online API
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1800);
@@ -1493,7 +1529,7 @@ async function showPhonetic(spelling) {
           if (!ipa.endsWith("/")) ipa = ipa + "/";
           localStorage.setItem(cacheKey, ipa);
           if (elements.tipWordSpelling.textContent === spelling) {
-            elements.tipWordPhonetic.textContent = ipa;
+            setIpa(ipa);
           }
         }
       }

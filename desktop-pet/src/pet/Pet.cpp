@@ -812,7 +812,6 @@ void Pet::drawThoughtDots(ID2D1RenderTarget* rt, ID2D1SolidColorBrush* brush,
 
 void Pet::setMood(PetMood mood) {
     m_mood = mood;
-    SoundPlayer::playMoodChange();
 }
 
 void Pet::startSpriteAction(SpriteAction action) {
